@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OAuthProvider {
+  APPLE
+  GOOGLE
+  EMAIL
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Currency {
+  USD
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  ENTRY_FEE
+  WINNING
+  REFUND
+  BONUS
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum MatchStatus {
+  CREATING
+  READY_CHECK
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+  DISPUTED
+}
+
+enum MatchTier {
+  PRACTICE
+  TIER_1
+  TIER_5
+  TIER_10
+  TIER_25
+}
+
+// ============================================================================
+// User Management
+// ============================================================================
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  passwordHash   String?
+  oauthProvider  OAuthProvider
+  oauthId        String?
+  nickname       String        @unique
+  avatarUrl      String?
+  role           UserRole      @default(USER)
+  isActive       Boolean       @default(true)
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  profile        UserProfile?
+  wallet         Wallet?
+  transactions   Transaction[]
+  matchPlayers   MatchPlayer[]
+  matchMoves     MatchMove[]
+  refreshTokens  RefreshToken[]
+  withdrawals    WithdrawalRequest[]
+  auditLogs      AuditLog[]
+
+  @@index([email])
+  @@index([oauthProvider, oauthId])
+}
+
+model UserProfile {
+  userId        String    @id
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  country       String?
+  state         String?
+  dateOfBirth   DateTime?
+  ageVerified   Boolean   @default(false)
+
+  xp            Int       @default(0)
+  level         Int       @default(1)
+  totalMatches  Int       @default(0)
+  wins          Int       @default(0)
+  losses        Int       @default(0)
+
+  updatedAt     DateTime  @updatedAt
+
+  @@index([country])
+}
+
+model RefreshToken {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token         String    @unique
+  expiresAt     DateTime
+  isRevoked     Boolean   @default(false)
+
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================================================
+// Wallet & Transactions
+// ============================================================================
+
+model Wallet {
+  userId        String    @id
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  balanceCents  Int       @default(0)
+  lockedCents   Int       @default(0)
+  currency      Currency  @default(USD)
+
+  updatedAt     DateTime  @updatedAt
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type          TransactionType
+  amountCents   Int
+  currency      Currency          @default(USD)
+  status        TransactionStatus
+
+  providerRef   String?           // Stripe payment intent ID, etc.
+  metadata      Json?
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@index([providerRef])
+}
+
+model WithdrawalRequest {
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amountCents   Int
+  status        TransactionStatus @default(PENDING)
+
+  payoutMethod  String
+  payoutDetails Json
+
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  reviewNotes   String?
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================================================================
+// Matches & Gameplay
+// ============================================================================
+
+model Match {
+  id                String        @id @default(cuid())
+  tier              MatchTier
+  entryFeeCents     Int
+  prizePoolCents    Int
+  platformFeeCents  Int
+  status            MatchStatus   @default(CREATING)
+
+  seed              String
+  deckHash          String
+
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  winnerId          String?
+
+  createdAt         DateTime      @default(now())
+
+  players           MatchPlayer[]
+  moves             MatchMove[]
+  disputes          Dispute[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([winnerId])
+}
+
+model MatchPlayer {
+  matchId         String
+  match           Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  position        Int       // 0 or 1
+  readyAt         DateTime?
+  disconnectsCount Int      @default(0)
+  lastSeq         Int       @default(0)
+
+  finalTimeMs     Int?
+  finalScore      Int?
+  isWinner        Boolean   @default(false)
+  payoutCents     Int       @default(0)
+
+  @@id([matchId, userId])
+  @@index([userId])
+}
+
+model MatchMove {
+  matchId       String
+  match         Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  seq           Int
+  moveType      String
+  payload       Json
+
+  createdAt     DateTime  @default(now())
+
+  @@id([matchId, userId, seq])
+  @@index([matchId, seq])
+}
+
+model Dispute {
+  id            String        @id @default(cuid())
+  matchId       String
+  match         Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  reporterId    String
+  reason        String
+  description   String?
+  evidence      Json?
+
+  status        String        @default("PENDING") // PENDING, INVESTIGATING, RESOLVED, DISMISSED
+  resolution    String?
+  resolvedBy    String?
+  resolvedAt    DateTime?
+
+  createdAt     DateTime      @default(now())
+
+  @@index([matchId])
+  @@index([status])
+}
+
+// ============================================================================
+// Configuration & Admin
+// ============================================================================
+
+model ConfigFlag {
+  key           String    @id
+  valueJson     Json
+  description   String?
+
+  updatedAt     DateTime  @updatedAt
+}
+
+model AuditLog {
+  id            String    @id @default(cuid())
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action        String
+  entity        String
+  entityId      String?
+  changes       Json?
+  ipAddress     String?
+  userAgent     String?
+
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([entity, entityId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// ============================================================================
+// Geo Restrictions
+// ============================================================================
+
+model RestrictedRegion {
+  id            String    @id @default(cuid())
+  countryCode   String
+  stateCode     String?
+  reason        String?
+  isActive      Boolean   @default(true)
+
+  createdAt     DateTime  @default(now())
+
+  @@unique([countryCode, stateCode])
+  @@index([isActive])
+}
