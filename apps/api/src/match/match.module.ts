@@ -4,7 +4,7 @@ import { MatchService } from './match.service';
 import { MatchmakingService } from './matchmaking.service';
 import { WalletModule } from '../wallet/wallet.module';
 
-@Module{
+@Module({
   imports: [WalletModule],
   controllers: [MatchController],
   providers: [MatchService, MatchmakingService],
