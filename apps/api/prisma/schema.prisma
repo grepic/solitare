@@ -342,6 +342,78 @@ model AgeVerificationRequest {
 }
 
 // ============================================================================
+// Daily Challenges & Achievements
+// ============================================================================
+
+model DailyChallenge {
+  id            String    @id @default(cuid())
+  date          DateTime  @unique
+  targetScore   Int
+  targetTime    Int
+  rewardCents   Int
+  participants  Int       @default(0)
+
+  completions   DailyChallengeCompletion[]
+
+  @@index([date(sort: Desc)])
+}
+
+model DailyChallengeCompletion {
+  userId          String
+  challengeId     String
+  challenge       DailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  score           Int
+  timeMs          Int
+  rewardClaimed   Boolean        @default(false)
+  completedAt     DateTime       @default(now())
+
+  @@id([userId, challengeId])
+  @@index([userId, completedAt(sort: Desc)])
+}
+
+model Achievement {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  name            String
+  description     String
+  iconUrl         String?
+  xpReward        Int
+  tier            String
+  isActive        Boolean   @default(true)
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  userId        String
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  progress      Int         @default(0)
+  isCompleted   Boolean     @default(false)
+  completedAt   DateTime?
+  unlockedAt    DateTime    @default(now())
+
+  @@id([userId, achievementId])
+  @@index([userId, isCompleted])
+}
+
+// ============================================================================
+// Rate Limiting
+// ============================================================================
+
+model RateLimitEntry {
+  id        String    @id @default(cuid())
+  key       String
+  action    String
+  timestamp DateTime  @default(now())
+
+  @@index([key, action, timestamp])
+  @@index([timestamp])
+}
+
+// ============================================================================
 // Stripe Webhook Events
 // ============================================================================
 
