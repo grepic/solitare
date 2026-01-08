@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards, Req, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, Req, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateProfileDto } from '@solitaire/shared';
@@ -25,5 +25,15 @@ export class UserController {
     @Query('offset') offset?: number,
   ) {
     return this.userService.getMatchHistory(req.user.id, limit, offset);
+  }
+
+  @Post('verify-age')
+  async submitAgeVerification(@Req() req, @Body() dto: { frontImage: string; backImage?: string }) {
+    return this.userService.submitAgeVerification(req.user.id, dto.frontImage, dto.backImage);
+  }
+
+  @Get('verification-status')
+  async getVerificationStatus(@Req() req) {
+    return this.userService.getVerificationStatus(req.user.id);
   }
 }

@@ -74,14 +74,15 @@ model User {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  profile        UserProfile?
-  wallet         Wallet?
-  transactions   Transaction[]
-  matchPlayers   MatchPlayer[]
-  matchMoves     MatchMove[]
-  refreshTokens  RefreshToken[]
-  withdrawals    WithdrawalRequest[]
-  auditLogs      AuditLog[]
+  profile                  UserProfile?
+  wallet                   Wallet?
+  transactions             Transaction[]
+  matchPlayers             MatchPlayer[]
+  matchMoves               MatchMove[]
+  refreshTokens            RefreshToken[]
+  withdrawals              WithdrawalRequest[]
+  ageVerificationRequests  AgeVerificationRequest[]
+  auditLogs                AuditLog[]
 
   @@index([email])
   @@index([oauthProvider, oauthId])
@@ -314,6 +315,30 @@ model RestrictedRegion {
 
   @@unique([countryCode, stateCode])
   @@index([isActive])
+}
+
+// ============================================================================
+// Age Verification
+// ============================================================================
+
+model AgeVerificationRequest {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  frontImageUrl   String
+  backImageUrl    String?
+
+  status          TransactionStatus @default(PENDING)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt(sort: Desc)])
 }
 
 // ============================================================================

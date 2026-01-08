@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from '@solitaire/shared';
+import { TransactionStatus } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -112,5 +113,80 @@ export class UserService {
         playedAt: mp.match.finishedAt?.toISOString(),
       };
     });
+  }
+
+  async submitAgeVerification(userId: string, frontImage: string, backImage?: string) {
+    // Check if user already has pending verification
+    const existingRequest = await this.prisma.ageVerificationRequest.findFirst({
+      where: {
+        userId,
+        status: TransactionStatus.PENDING,
+      },
+    });
+
+    if (existingRequest) {
+      throw new BadRequestException('You already have a pending verification request');
+    }
+
+    // Check if user is already verified
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true },
+    });
+
+    if (user?.profile?.ageVerified) {
+      throw new BadRequestException('Your age is already verified');
+    }
+
+    // Create verification request
+    // In production, upload images to S3 or similar storage
+    // For now, we'll store base64 in database (NOT recommended for production)
+    const request = await this.prisma.ageVerificationRequest.create({
+      data: {
+        userId,
+        frontImageUrl: frontImage.substring(0, 100), // Truncate for demo - use S3 in production
+        backImageUrl: backImage?.substring(0, 100),
+        status: TransactionStatus.PENDING,
+      },
+    });
+
+    return {
+      id: request.id,
+      status: request.status,
+      message: 'Verification request submitted successfully',
+    };
+  }
+
+  async getVerificationStatus(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        profile: true,
+        ageVerificationRequests: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const latestRequest = user.ageVerificationRequests[0];
+
+    return {
+      ageVerified: user.profile?.ageVerified || false,
+      hasPendingRequest: latestRequest?.status === TransactionStatus.PENDING,
+      latestRequest: latestRequest
+        ? {
+            id: latestRequest.id,
+            status: latestRequest.status,
+            submittedAt: latestRequest.createdAt.toISOString(),
+            reviewedAt: latestRequest.reviewedAt?.toISOString(),
+            reviewNotes: latestRequest.reviewNotes,
+          }
+        : null,
+    };
   }
 }
