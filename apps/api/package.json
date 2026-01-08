@@ -41,6 +41,7 @@
     "socket.io": "^4.6.0",
     "zod": "^3.22.4",
     "nanoid": "^3.3.7",
+    "geoip-lite": "^1.4.10",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1"
   },

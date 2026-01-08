@@ -88,6 +88,12 @@ model User {
   @@index([oauthProvider, oauthId])
 }
 
+enum AgeVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model UserProfile {
   userId        String    @id
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -96,6 +102,29 @@ model UserProfile {
   state         String?
   dateOfBirth   DateTime?
   ageVerified   Boolean   @default(false)
+  ageVerificationStatus AgeVerificationStatus?
+
+  // Responsible Gaming - Deposit Limits
+  depositLimitDaily    Int?
+  depositLimitWeekly   Int?
+  depositLimitMonthly  Int?
+
+  // Responsible Gaming - Loss Limits
+  lossLimitDaily       Int?
+  lossLimitWeekly      Int?
+  lossLimitMonthly     Int?
+
+  // Responsible Gaming - Session Limits
+  sessionLimitMinutes   Int?
+  sessionWarningMinutes Int?
+
+  // Responsible Gaming - Self Exclusion
+  selfExclusionActive  Boolean   @default(false)
+  selfExclusionStart   DateTime?
+  selfExclusionEnd     DateTime?
+  selfExclusionReason  String?
+
+  limitsUpdatedAt      DateTime?
 
   xp            Int       @default(0)
   level         Int       @default(1)
