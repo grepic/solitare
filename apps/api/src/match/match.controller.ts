@@ -28,4 +28,9 @@ export class MatchController {
       currentSeq: moves[moves.length - 1]?.seq || 0,
     };
   }
+
+  @Get(':id/replay')
+  async getMatchReplay(@Param('id') matchId: string, @Req() req) {
+    return this.matchService.getMatchReplay(matchId, req.user.id);
+  }
 }

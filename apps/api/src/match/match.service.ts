@@ -282,4 +282,32 @@ export class MatchService {
       isPractice: config.isPractice,
     }));
   }
+
+  async getMatchReplay(matchId: string, userId: string) {
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        players: {
+          where: { userId },
+        },
+        moves: {
+          where: { userId },
+          orderBy: { seq: 'asc' },
+        },
+      },
+    });
+
+    if (!match || match.players.length === 0) {
+      throw new Error('Match not found or you were not a participant');
+    }
+
+    return {
+      matchId: match.id,
+      seed: match.seed,
+      moves: match.moves,
+      finalScore: match.players[0]?.finalScore,
+      finalTimeMs: match.players[0]?.finalTimeMs,
+      isWinner: match.players[0]?.isWinner,
+    };
+  }
 }
