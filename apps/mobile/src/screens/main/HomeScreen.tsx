@@ -83,9 +83,18 @@ export default function HomeScreen({ navigation }: any) {
       contentContainerStyle={styles(theme).content}
     >
       <View style={styles(theme).header}>
-        <Text style={[styles(theme).title, { color: theme.colors.text }]}>
-          Welcome, {user?.nickname}!
-        </Text>
+        <View style={styles(theme).headerTop}>
+          <Text style={[styles(theme).title, { color: theme.colors.text }]}>
+            Welcome, {user?.nickname}!
+          </Text>
+          <Button
+            title="Leaderboard"
+            onPress={() => navigation.navigate('Leaderboard')}
+            variant="ghost"
+            theme={theme}
+            size="small"
+          />
+        </View>
         {wallet && (
           <Text style={[styles(theme).balance, { color: theme.colors.primary }]}>
             Balance: ${(wallet.availableCents / 100).toFixed(2)}
@@ -161,6 +170,12 @@ const styles = (theme: any) =>
     },
     header: {
       marginBottom: theme.spacing.md,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xs,
     },
     title: {
       ...theme.typography.h1,

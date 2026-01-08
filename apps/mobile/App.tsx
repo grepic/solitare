@@ -1,21 +1,48 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ENV from './src/config/env';
 import { useAuthStore } from './src/store/auth.store';
 import { useThemeStore } from './src/store/theme.store';
 import RootNavigator from './src/navigation/RootNavigator';
+import { Tutorial } from './src/components/Tutorial';
 
 export default function App() {
-  const { loadAuth, isLoading } = useAuthStore();
+  const { loadAuth, isLoading, isAuthenticated } = useAuthStore();
   const { theme } = useThemeStore();
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     loadAuth();
+    checkFirstLaunch();
   }, []);
+
+  const checkFirstLaunch = async () => {
+    try {
+      const hasSeenTutorial = await AsyncStorage.getItem('hasSeenTutorial');
+      if (!hasSeenTutorial) {
+        // Wait a bit for auth to load before showing tutorial
+        setTimeout(() => {
+          setShowTutorial(true);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Failed to check tutorial status:', error);
+    }
+  };
+
+  const handleTutorialComplete = async () => {
+    try {
+      await AsyncStorage.setItem('hasSeenTutorial', 'true');
+      setShowTutorial(false);
+    } catch (error) {
+      console.error('Failed to save tutorial status:', error);
+    }
+  };
 
   if (isLoading) {
     return null; // Or a splash screen
@@ -27,6 +54,9 @@ export default function App() {
         <NavigationContainer>
           <StatusBar style={theme.isDark ? 'light' : 'dark'} />
           <RootNavigator />
+          {isAuthenticated && (
+            <Tutorial visible={showTutorial} onComplete={handleTutorialComplete} theme={theme} />
+          )}
         </NavigationContainer>
       </StripeProvider>
     </SafeAreaProvider>

@@ -5,7 +5,7 @@ import { useThemeStore } from '../../store/theme.store';
 import { useAuthStore } from '../../store/auth.store';
 import api from '../../services/api';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: any) {
   const { theme, toggleTheme, isDark } = useThemeStore();
   const { user, clearAuth } = useAuthStore();
   const [profile, setProfile] = useState<any>(null);
@@ -115,10 +115,17 @@ export default function ProfileScreen() {
 
       <Card theme={theme}>
         <Button
+          title="Settings"
+          onPress={() => navigation.navigate('Settings')}
+          variant="primary"
+          theme={theme}
+        />
+        <Button
           title={`Theme: ${isDark ? 'Dark' : 'Light'}`}
           onPress={toggleTheme}
           variant="secondary"
           theme={theme}
+          style={{ marginTop: theme.spacing.md }}
         />
         <Button
           title="Logout"
