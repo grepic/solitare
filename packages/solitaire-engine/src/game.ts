@@ -185,6 +185,16 @@ function executeTableauToTableau(
     return { success: false, error: 'Cannot move face-down cards' };
   }
 
+  // Validate sequence: cards must be in alternating colors and descending ranks
+  for (let i = 0; i < cards.length - 1; i++) {
+    const currentCard = cards[i];
+    const nextCard = cards[i + 1];
+
+    if (!isOppositeColor(currentCard, nextCard) || currentCard.rank - 1 !== nextCard.rank) {
+      return { success: false, error: 'Invalid card sequence' };
+    }
+  }
+
   // Check if we can place the bottom card of the sequence
   if (!canPlaceOnTableau(cards[0], toPile)) {
     return { success: false, error: 'Invalid placement' };

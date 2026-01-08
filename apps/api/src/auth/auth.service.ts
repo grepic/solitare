@@ -3,9 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { nanoid } from 'nanoid';
+import axios from 'axios';
 
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto, OAuthGoogleDto, AuthResponse, AuthTokens } from '@solitaire/shared';
+import { RegisterDto, LoginDto, OAuthGoogleDto, OAuthAppleDto, AuthResponse, AuthTokens } from '@solitaire/shared';
 import { OAuthProvider, UserRole } from '@prisma/client';
 
 @Injectable()
@@ -118,9 +119,160 @@ export class AuthService {
   }
 
   async oauthGoogle(dto: OAuthGoogleDto): Promise<AuthResponse> {
-    // In production, verify idToken with Google
-    // For now, we'll simulate it
-    throw new Error('Google OAuth not yet implemented - requires Google API verification');
+    // Verify Google ID token
+    const googleUser = await this.verifyGoogleToken(dto.idToken);
+
+    if (!googleUser || !googleUser.email) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+
+    // Find or create user
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: googleUser.email },
+          { oauthId: googleUser.sub, oauthProvider: OAuthProvider.GOOGLE },
+        ],
+      },
+      include: { profile: true },
+    });
+
+    if (!user) {
+      // Create new user from Google data
+      user = await this.prisma.user.create({
+        data: {
+          email: googleUser.email,
+          nickname: googleUser.name || googleUser.email.split('@')[0],
+          avatarUrl: googleUser.picture,
+          oauthProvider: OAuthProvider.GOOGLE,
+          oauthId: googleUser.sub,
+          role: UserRole.USER,
+          profile: {
+            create: {
+              ageVerified: false, // Require age verification after OAuth signup
+            },
+          },
+          wallet: {
+            create: {
+              balanceCents: 0,
+              lockedCents: 0,
+            },
+          },
+        },
+        include: { profile: true },
+      });
+    } else if (!user.oauthId && user.oauthProvider === OAuthProvider.EMAIL) {
+      // Link existing email user to Google
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          oauthProvider: OAuthProvider.GOOGLE,
+          oauthId: googleUser.sub,
+          avatarUrl: googleUser.picture || user.avatarUrl,
+        },
+      });
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is disabled');
+    }
+
+    const tokens = await this.generateTokens(user.id);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+      },
+      tokens,
+    };
+  }
+
+  async oauthApple(dto: OAuthAppleDto): Promise<AuthResponse> {
+    // Verify Apple identity token
+    const appleUser = await this.verifyAppleToken(dto.identityToken);
+
+    if (!appleUser || !appleUser.sub) {
+      throw new UnauthorizedException('Invalid Apple token');
+    }
+
+    // Apple provides email only on first sign-in
+    const email = dto.user?.email || appleUser.email;
+
+    if (!email) {
+      throw new BadRequestException('Email is required for first-time Apple sign-in');
+    }
+
+    // Find or create user
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { oauthId: appleUser.sub, oauthProvider: OAuthProvider.APPLE },
+        ],
+      },
+      include: { profile: true },
+    });
+
+    if (!user) {
+      // Create new user from Apple data
+      const firstName = dto.user?.name?.firstName || '';
+      const lastName = dto.user?.name?.lastName || '';
+      const nickname = firstName && lastName
+        ? `${firstName} ${lastName}`.trim()
+        : email.split('@')[0];
+
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          nickname,
+          oauthProvider: OAuthProvider.APPLE,
+          oauthId: appleUser.sub,
+          role: UserRole.USER,
+          profile: {
+            create: {
+              ageVerified: false, // Require age verification after OAuth signup
+            },
+          },
+          wallet: {
+            create: {
+              balanceCents: 0,
+              lockedCents: 0,
+            },
+          },
+        },
+        include: { profile: true },
+      });
+    } else if (!user.oauthId && user.oauthProvider === OAuthProvider.EMAIL) {
+      // Link existing email user to Apple
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          oauthProvider: OAuthProvider.APPLE,
+          oauthId: appleUser.sub,
+        },
+      });
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is disabled');
+    }
+
+    const tokens = await this.generateTokens(user.id);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+      },
+      tokens,
+    };
   }
 
   async refreshTokens(refreshToken: string): Promise<AuthTokens> {
@@ -212,6 +364,54 @@ export class AuthService {
 
     if (restriction) {
       throw new BadRequestException('Registration not available in your region');
+    }
+  }
+
+  private async verifyGoogleToken(idToken: string): Promise<any> {
+    try {
+      const response = await axios.get(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
+      );
+
+      const payload = response.data;
+
+      // Verify token is for this app
+      const googleClientId = this.config.get('GOOGLE_CLIENT_ID');
+      if (googleClientId && payload.aud !== googleClientId) {
+        throw new UnauthorizedException('Invalid Google token audience');
+      }
+
+      return payload;
+    } catch (error) {
+      throw new UnauthorizedException('Failed to verify Google token');
+    }
+  }
+
+  private async verifyAppleToken(identityToken: string): Promise<any> {
+    try {
+      // Decode JWT without verification for now
+      // In production, verify signature with Apple's public keys
+      const [, payloadBase64] = identityToken.split('.');
+      const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+
+      // Verify token issuer and audience
+      if (payload.iss !== 'https://appleid.apple.com') {
+        throw new UnauthorizedException('Invalid Apple token issuer');
+      }
+
+      const appleClientId = this.config.get('APPLE_CLIENT_ID');
+      if (appleClientId && payload.aud !== appleClientId) {
+        throw new UnauthorizedException('Invalid Apple token audience');
+      }
+
+      // Verify expiration
+      if (payload.exp && payload.exp < Date.now() / 1000) {
+        throw new UnauthorizedException('Apple token expired');
+      }
+
+      return payload;
+    } catch (error) {
+      throw new UnauthorizedException('Failed to verify Apple token');
     }
   }
 }

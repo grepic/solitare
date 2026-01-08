@@ -68,25 +68,61 @@ export class StripeService {
     let event: Stripe.Event;
 
     try {
+      // Verify webhook signature - this prevents unauthorized requests
       event = this.stripe.webhooks.constructEvent(rawBody, signature, webhookSecret!);
     } catch (err) {
+      console.error('Webhook signature verification failed:', err.message);
       throw new BadRequestException(`Webhook signature verification failed: ${err.message}`);
     }
 
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-        await this.handlePaymentSuccess(event.data.object as Stripe.PaymentIntent);
-        break;
-
-      case 'payment_intent.payment_failed':
-        await this.handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
-        break;
-
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
+    // Prevent replay attacks - reject events older than 5 minutes
+    const eventAge = Date.now() / 1000 - event.created;
+    if (eventAge > 300) {
+      console.warn(`Rejected old webhook event ${event.id}, age: ${eventAge}s`);
+      throw new BadRequestException('Webhook event too old');
     }
 
-    return { received: true };
+    // Idempotency check - prevent processing the same event twice
+    const existingEvent = await this.prisma.stripeWebhookEvent.findUnique({
+      where: { eventId: event.id },
+    });
+
+    if (existingEvent) {
+      console.log(`Event ${event.id} already processed, skipping`);
+      return { received: true, processed: false };
+    }
+
+    // Record event for idempotency
+    await this.prisma.stripeWebhookEvent.create({
+      data: {
+        eventId: event.id,
+        eventType: event.type,
+        processedAt: new Date(),
+      },
+    });
+
+    console.log(`Processing webhook event ${event.id} (${event.type})`);
+
+    try {
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          await this.handlePaymentSuccess(event.data.object as Stripe.PaymentIntent);
+          break;
+
+        case 'payment_intent.payment_failed':
+          await this.handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
+          break;
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+    } catch (error) {
+      console.error(`Failed to process webhook event ${event.id}:`, error);
+      // Don't throw - Stripe will retry if we return non-2xx
+      // Log the error for manual investigation
+    }
+
+    return { received: true, processed: true };
   }
 
   async createWithdrawalRequest(

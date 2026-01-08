@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../store/theme.store';
 import { useGameStore } from '../../store/game.store';
 import { PlayingCard } from '../../components/PlayingCard';
+import { DraggableCard } from '../../components/DraggableCard';
+import { DropZone, findDropZone, triggerDrop } from '../../components/DropZone';
 import { MoveType, Suit } from '@solitaire/engine';
 import { Button } from '@solitaire/ui-kit';
 import websocket from '../../services/websocket';
@@ -17,7 +19,8 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
   const { theme } = useThemeStore();
   const { matchId, seed } = route.params;
   const { gameState, initGame, makeMove, checkWin, moveSequence, reset, startTime } = useGameStore();
-  const [selectedPile, setSelectedPile] = useState<{ type: string; index?: number } | null>(null);
+  const [selectedPile, setSelectedPile] = useState<{ type: string; index?: number; cardIndex?: number } | null>(null);
+  const [draggedCard, setDraggedCard] = useState<{ type: string; index?: number; cardIndex?: number } | null>(null);
   const [opponentProgress, setOpponentProgress] = useState(0);
   const [countdown, setCountdown] = useState(3);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -104,11 +107,66 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
     );
   };
 
-  const handleCardPress = (type: string, index?: number) => {
+  const handleDragStart = (type: string, index?: number, cardIndex?: number) => {
+    if (countdown > 0) return;
+    setDraggedCard({ type, index, cardIndex });
+  };
+
+  const handleDragEnd = (x: number, y: number) => {
+    if (!draggedCard) return;
+
+    const dropZoneId = findDropZone(x, y);
+
+    if (dropZoneId) {
+      const [dropType, dropIndex] = dropZoneId.split('-');
+
+      let move: any = null;
+
+      if (draggedCard.type === 'waste' && dropType === 'tableau') {
+        move = { type: MoveType.WASTE_TO_TABLEAU, to: parseInt(dropIndex) };
+      } else if (draggedCard.type === 'waste' && dropType === 'foundation') {
+        const wasteCard = gameState?.waste[gameState.waste.length - 1];
+        if (wasteCard) {
+          move = { type: MoveType.WASTE_TO_FOUNDATION, suit: wasteCard.suit };
+        }
+      } else if (draggedCard.type === 'tableau' && dropType === 'foundation') {
+        const pile = gameState?.tableau[draggedCard.index!];
+        const topCard = pile?.[pile.length - 1];
+        if (topCard) {
+          move = { type: MoveType.TABLEAU_TO_FOUNDATION, from: draggedCard.index, suit: topCard.suit };
+        }
+      } else if (draggedCard.type === 'tableau' && dropType === 'tableau') {
+        const pile = gameState?.tableau[draggedCard.index!];
+        const cardCount = draggedCard.cardIndex !== undefined
+          ? pile.length - draggedCard.cardIndex
+          : 1;
+
+        move = {
+          type: MoveType.TABLEAU_TO_TABLEAU,
+          from: draggedCard.index,
+          to: parseInt(dropIndex),
+          cardCount,
+        };
+      }
+
+      if (move && makeMove(move)) {
+        websocket.emit('MOVE', {
+          matchId,
+          seq: moveSequence,
+          moveType: move.type,
+          payload: move,
+        });
+      }
+    }
+
+    setDraggedCard(null);
+  };
+
+  const handleCardPress = (type: string, index?: number, cardIndex?: number) => {
     if (countdown > 0) return;
 
     if (!selectedPile) {
-      setSelectedPile({ type, index });
+      setSelectedPile({ type, index, cardIndex });
       return;
     }
 
@@ -130,11 +188,17 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
         move = { type: MoveType.TABLEAU_TO_FOUNDATION, from: selectedPile.index, suit: topCard.suit };
       }
     } else if (selectedPile.type === 'tableau' && type === 'tableau') {
+      const pile = gameState?.tableau[selectedPile.index!];
+      // Calculate how many cards to move based on which card was selected
+      const cardCount = selectedPile.cardIndex !== undefined
+        ? pile.length - selectedPile.cardIndex
+        : 1;
+
       move = {
         type: MoveType.TABLEAU_TO_TABLEAU,
         from: selectedPile.index,
         to: index,
-        cardCount: 1,
+        cardCount,
       };
     }
 
@@ -239,9 +303,11 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
             {/* Waste Pile */}
             <TouchableOpacity onPress={() => handleCardPress('waste')}>
               {gameState.waste.length > 0 ? (
-                <PlayingCard
+                <DraggableCard
                   card={gameState.waste[gameState.waste.length - 1]}
                   isSelected={selectedPile?.type === 'waste'}
+                  onDragStart={() => handleDragStart('waste')}
+                  onDragEnd={handleDragEnd}
                 />
               ) : (
                 <View style={styles(theme).emptyPile} />
@@ -252,49 +318,60 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
 
             {/* Foundation Piles */}
             {Object.values(Suit).map((suit, index) => (
-              <TouchableOpacity key={suit} onPress={() => handleCardPress('foundation', index)}>
-                {gameState.foundation[suit].length > 0 ? (
-                  <PlayingCard
-                    card={gameState.foundation[suit][gameState.foundation[suit].length - 1]}
-                    isSelected={selectedPile?.type === 'foundation' && selectedPile?.index === index}
-                  />
-                ) : (
-                  <View style={styles(theme).foundationEmpty}>
-                    <Text style={styles(theme).suitPlaceholder}>
-                      {suit === Suit.HEARTS ? '♥' : suit === Suit.DIAMONDS ? '♦' : suit === Suit.CLUBS ? '♣' : '♠'}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+              <DropZone key={suit} id={`foundation-${index}`}>
+                <TouchableOpacity onPress={() => handleCardPress('foundation', index)}>
+                  {gameState.foundation[suit].length > 0 ? (
+                    <PlayingCard
+                      card={gameState.foundation[suit][gameState.foundation[suit].length - 1]}
+                      isSelected={selectedPile?.type === 'foundation' && selectedPile?.index === index}
+                    />
+                  ) : (
+                    <View style={styles(theme).foundationEmpty}>
+                      <Text style={styles(theme).suitPlaceholder}>
+                        {suit === Suit.HEARTS ? '♥' : suit === Suit.DIAMONDS ? '♦' : suit === Suit.CLUBS ? '♣' : '♠'}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </DropZone>
             ))}
           </View>
 
           {/* Tableau */}
           <View style={styles(theme).tableau}>
             {gameState.tableau.map((pile, pileIndex) => (
-              <View key={pileIndex} style={styles(theme).tableauColumn}>
-                <TouchableOpacity onPress={() => handleCardPress('tableau', pileIndex)}>
-                  {pile.length === 0 ? (
+              <DropZone key={pileIndex} id={`tableau-${pileIndex}`} style={styles(theme).tableauColumn}>
+                {pile.length === 0 ? (
+                  <TouchableOpacity onPress={() => handleCardPress('tableau', pileIndex)}>
                     <View style={styles(theme).emptyPile} />
-                  ) : (
-                    <View>
-                      {pile.map((card, cardIndex) => (
-                        <View
-                          key={cardIndex}
-                          style={{
-                            marginTop: cardIndex === 0 ? 0 : 24,
-                          }}
-                        >
-                          <PlayingCard
-                            card={card}
-                            isSelected={selectedPile?.type === 'tableau' && selectedPile?.index === pileIndex}
-                          />
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
+                  </TouchableOpacity>
+                ) : (
+                  <View>
+                    {pile.map((card, cardIndex) => (
+                      <TouchableOpacity
+                        key={cardIndex}
+                        onPress={() => card.faceUp ? handleCardPress('tableau', pileIndex, cardIndex) : undefined}
+                        disabled={!card.faceUp}
+                        style={{
+                          marginTop: cardIndex === 0 ? 0 : 24,
+                        }}
+                      >
+                        <DraggableCard
+                          card={card}
+                          isSelected={
+                            selectedPile?.type === 'tableau' &&
+                            selectedPile?.index === pileIndex &&
+                            selectedPile?.cardIndex === cardIndex
+                          }
+                          onDragStart={() => handleDragStart('tableau', pileIndex, cardIndex)}
+                          onDragEnd={handleDragEnd}
+                          disabled={!card.faceUp}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </DropZone>
             ))}
           </View>
         </ScrollView>

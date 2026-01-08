@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards, Get, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, RefreshTokenDto, OAuthGoogleDto } from '@solitaire/shared';
+import { RegisterDto, LoginDto, RefreshTokenDto, OAuthGoogleDto, OAuthAppleDto } from '@solitaire/shared';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -20,6 +20,11 @@ export class AuthController {
   @Post('oauth/google')
   async oauthGoogle(@Body() dto: OAuthGoogleDto) {
     return this.authService.oauthGoogle(dto);
+  }
+
+  @Post('oauth/apple')
+  async oauthApple(@Body() dto: OAuthAppleDto) {
+    return this.authService.oauthApple(dto);
   }
 
   @Post('refresh')
