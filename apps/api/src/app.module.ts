@@ -11,6 +11,7 @@ import { MatchModule } from './match/match.module';
 import { WebSocketModule } from './websocket/websocket.module';
 import { StripeModule } from './stripe/stripe.module';
 import { AdminModule } from './admin/admin.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AdminModule } from './admin/admin.module';
     WebSocketModule,
     StripeModule,
     AdminModule,
+    LeaderboardModule,
   ],
   providers: [
     {

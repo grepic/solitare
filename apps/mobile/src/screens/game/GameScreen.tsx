@@ -6,7 +6,7 @@ import { useGameStore } from '../../store/game.store';
 import { PlayingCard } from '../../components/PlayingCard';
 import { DraggableCard } from '../../components/DraggableCard';
 import { DropZone, findDropZone, triggerDrop } from '../../components/DropZone';
-import { MoveType, Suit } from '@solitaire/engine';
+import { MoveType, Suit, getHints, canAutoComplete, getAutoCompleteMoves } from '@solitaire/engine';
 import { Button } from '@solitaire/ui-kit';
 import websocket from '../../services/websocket';
 
@@ -24,6 +24,7 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
   const [opponentProgress, setOpponentProgress] = useState(0);
   const [countdown, setCountdown] = useState(3);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showingHint, setShowingHint] = useState(false);
 
   useEffect(() => {
     initGame(seed, matchId);
@@ -214,6 +215,72 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
     setSelectedPile(null);
   };
 
+  const handleShowHint = () => {
+    if (!gameState) return;
+
+    const hints = getHints(gameState);
+    if (hints.length === 0) {
+      Alert.alert('No Hints', 'No valid moves available. Try drawing from the stock pile.');
+      return;
+    }
+
+    const hint = hints[0]; // Get best hint
+    setShowingHint(true);
+
+    // Show hint for 2 seconds
+    setTimeout(() => setShowingHint(false), 2000);
+
+    // Show alert with hint
+    let message = '';
+    if (hint.type === MoveType.WASTE_TO_FOUNDATION) {
+      message = 'Try moving the waste card to the foundation';
+    } else if (hint.type === MoveType.WASTE_TO_TABLEAU) {
+      message = `Try moving the waste card to tableau pile ${hint.to! + 1}`;
+    } else if (hint.type === MoveType.TABLEAU_TO_FOUNDATION) {
+      message = `Try moving from tableau pile ${hint.from! + 1} to foundation`;
+    } else if (hint.type === MoveType.TABLEAU_TO_TABLEAU) {
+      message = `Try moving from tableau pile ${hint.from! + 1} to pile ${hint.to! + 1}`;
+    }
+
+    Alert.alert('Hint', message);
+  };
+
+  const handleAutoComplete = () => {
+    if (!gameState) return;
+
+    if (!canAutoComplete(gameState)) {
+      Alert.alert('Not Yet', 'Auto-complete is only available when all cards are face-up.');
+      return;
+    }
+
+    Alert.alert(
+      'Auto-Complete',
+      'Auto-complete will move all remaining cards to foundations. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Complete',
+          onPress: () => {
+            const moves = getAutoCompleteMoves(gameState);
+            // Execute moves one by one
+            moves.forEach((move, index) => {
+              setTimeout(() => {
+                if (makeMove(move)) {
+                  websocket.emit('MOVE', {
+                    matchId,
+                    seq: moveSequence + index,
+                    moveType: move.type,
+                    payload: move,
+                  });
+                }
+              }, index * 300); // 300ms delay between moves
+            });
+          },
+        },
+      ]
+    );
+  };
+
   const handleResign = () => {
     Alert.alert('Resign', 'Are you sure you want to forfeit this match?', [
       { text: 'Cancel', style: 'cancel' },
@@ -378,6 +445,17 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
 
         {/* Footer Actions */}
         <View style={styles(theme).footer}>
+          <View style={styles(theme).footerRow}>
+            <Button title="Hint" onPress={handleShowHint} variant="ghost" theme={theme} size="small" />
+            <Button
+              title="Auto"
+              onPress={handleAutoComplete}
+              variant="ghost"
+              theme={theme}
+              size="small"
+              disabled={!gameState || !canAutoComplete(gameState)}
+            />
+          </View>
           <Button title="Resign" onPress={handleResign} variant="danger" theme={theme} size="small" />
         </View>
       </LinearGradient>
@@ -485,5 +563,10 @@ const styles = (theme: any) =>
     footer: {
       padding: theme.spacing.md,
       paddingBottom: theme.spacing.xl,
+      gap: theme.spacing.md,
+    },
+    footerRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
     },
   });

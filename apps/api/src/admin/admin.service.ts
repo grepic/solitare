@@ -85,4 +85,29 @@ export class AdminService {
       totalRevenueCents: totalRevenue._sum.amountCents || 0,
     };
   }
+
+  async getStats() {
+    return this.getPlatformStats();
+  }
+
+  async getWithdrawalRequests(status?: TransactionStatus) {
+    return this.prisma.withdrawalRequest.findMany({
+      where: status ? { status } : undefined,
+      include: { user: true },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  async createAuditLog(userId: string, action: string, entity: string, entityId: string, changes: any) {
+    return this.prisma.auditLog.create({
+      data: {
+        userId,
+        action,
+        entity,
+        entityId,
+        changes,
+      },
+    });
+  }
 }

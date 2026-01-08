@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req, Query } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { StripeService } from '../stripe/stripe.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -11,6 +11,41 @@ export class AdminController {
     private adminService: AdminService,
     private stripeService: StripeService,
   ) {}
+
+  @Get('users')
+  async getUsers(@Query('search') search?: string, @Query('limit') limit?: number) {
+    return this.adminService.getUsers(search, limit);
+  }
+
+  @Patch('users/:id/ban')
+  async banUser(@Param('id') userId: string, @Body() dto: { reason: string; durationDays?: number }) {
+    return this.adminService.banUser(userId, dto.reason, dto.durationDays);
+  }
+
+  @Patch('users/:id/unban')
+  async unbanUser(@Param('id') userId: string) {
+    return this.adminService.unbanUser(userId);
+  }
+
+  @Get('age-verification/pending')
+  async getPendingVerifications() {
+    return this.adminService.getPendingAgeVerifications();
+  }
+
+  @Patch('age-verification/:id/approve')
+  async approveVerification(@Param('id') requestId: string, @Body() dto: { adminId: string }) {
+    return this.adminService.approveAgeVerification(requestId, dto.adminId);
+  }
+
+  @Patch('age-verification/:id/reject')
+  async rejectVerification(@Param('id') requestId: string, @Body() dto: { adminId: string; reason: string }) {
+    return this.adminService.rejectAgeVerification(requestId, dto.adminId, dto.reason);
+  }
+
+  @Post('daily-challenge')
+  async createDailyChallenge(@Body() dto: { targetScore: number; targetTime: number; rewardCents: number }) {
+    return this.adminService.createDailyChallenge(dto.targetScore, dto.targetTime, dto.rewardCents);
+  }
 
   @Get('withdrawals')
   async getWithdrawals(@Query('status') status?: string) {
