@@ -93,7 +93,7 @@ export default function ProfileScreen({ navigation }: any) {
       {matches.map((match, index) => (
         <Card key={index} theme={theme} padding={theme.spacing.md}>
           <View style={styles(theme).match}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.text, fontWeight: '600' }}>
                 vs {match.opponent?.nickname || 'Unknown'}
               </Text>
@@ -101,14 +101,23 @@ export default function ProfileScreen({ navigation }: any) {
                 {match.tier} • {new Date(match.playedAt).toLocaleDateString()}
               </Text>
             </View>
-            <Text
-              style={{
-                color: match.isWinner ? theme.colors.success : theme.colors.error,
-                fontWeight: '600',
-              }}
-            >
-              {match.isWinner ? 'WIN' : 'LOSS'}
-            </Text>
+            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+              <Text
+                style={{
+                  color: match.isWinner ? theme.colors.success : theme.colors.error,
+                  fontWeight: '600',
+                }}
+              >
+                {match.isWinner ? 'WIN' : 'LOSS'}
+              </Text>
+              <Button
+                title="Replay"
+                onPress={() => navigation.navigate('Replay', { matchId: match.id })}
+                variant="ghost"
+                theme={theme}
+                size="small"
+              />
+            </View>
           </View>
         </Card>
       ))}
