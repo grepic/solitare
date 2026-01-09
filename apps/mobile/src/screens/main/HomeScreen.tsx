@@ -106,6 +106,27 @@ export default function HomeScreen({ navigation }: any) {
         {inQueue ? 'Finding Match...' : 'Select Match Type'}
       </Text>
 
+      {!inQueue && (
+        <Card theme={theme}>
+          <View style={styles(theme).lobbyCard}>
+            <View style={styles(theme).lobbyInfo}>
+              <Text style={[styles(theme).lobbyTitle, { color: theme.colors.text }]}>
+                🎮 Browse Multi-Player Lobbies
+              </Text>
+              <Text style={[styles(theme).lobbyDesc, { color: theme.colors.textSecondary }]}>
+                Join games with 4-10 players • Win proportional prizes
+              </Text>
+            </View>
+            <Button
+              title="Browse Lobbies"
+              onPress={() => navigation.navigate('LobbyBrowser')}
+              variant="primary"
+              theme={theme}
+            />
+          </View>
+        </Card>
+      )}
+
       {inQueue ? (
         <Card theme={theme}>
           <Text style={{ color: theme.colors.text, textAlign: 'center', marginBottom: 16 }}>
@@ -194,5 +215,20 @@ const styles = (theme: any) =>
     tierDesc: {
       ...theme.typography.body,
       marginBottom: theme.spacing.md,
+    },
+    lobbyCard: {
+      gap: theme.spacing.md,
+    },
+    lobbyInfo: {
+      gap: theme.spacing.xs,
+    },
+    lobbyTitle: {
+      ...theme.typography.h3,
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    lobbyDesc: {
+      ...theme.typography.body,
+      fontSize: 14,
     },
   });

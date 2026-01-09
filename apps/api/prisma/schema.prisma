@@ -48,6 +48,14 @@ enum MatchStatus {
   DISPUTED
 }
 
+enum GameStatus {
+  WAITING        // Accepting players in lobby
+  READY_CHECK    // Countdown before start
+  IN_PROGRESS    // Game started
+  FINISHED       // Completed
+  CANCELLED      // Cancelled or expired
+}
+
 enum MatchTier {
   PRACTICE
   TIER_1
@@ -83,6 +91,8 @@ model User {
   withdrawals              WithdrawalRequest[]
   ageVerificationRequests  AgeVerificationRequest[]
   auditLogs                AuditLog[]
+  gamePlayers              GamePlayer[]
+  couponClaims             CouponClaim[]
 
   @@index([email])
   @@index([oauthProvider, oauthId])
@@ -454,4 +464,130 @@ model StripeWebhookEvent {
 
   @@index([eventId])
   @@index([processedAt(sort: Desc)])
+}
+
+// ============================================================================
+// Multi-Player Game Lobbies (NEW - Solitaire Smash Style)
+// ============================================================================
+
+model Game {
+  id                String       @id @default(cuid())
+  name              String       // "Gem-a-zing", "Easy Gains", etc.
+  description       String?      // Optional flavor text
+
+  tier              MatchTier
+  maxPlayers        Int          // 2, 4, 5, 6, 7, 8, 10
+  currentPlayers    Int          @default(0)
+  status            GameStatus   @default(WAITING)
+
+  // Prize & Payment
+  entryFeeCents     Int
+  prizePoolCents    Int
+  platformFeeCents  Int
+  prizeDistribution Json         // Array of percentages [50, 30, 15, 5]
+
+  // Game Configuration
+  seed              String       // Solitaire deck seed (deterministic)
+  deckHash          String       // Hash for fair play verification
+
+  // Timing
+  readyCheckStartAt DateTime?    // When ready check countdown started
+  startedAt         DateTime?    // When game actually started
+  finishedAt        DateTime?    // When game completed
+
+  // Limited-Time Tournaments
+  isLimited         Boolean      @default(false)
+  endsAt            DateTime?    // Auto-cancel if not filled by this time
+
+  // Relations
+  players           GamePlayer[]
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([tier, status])
+  @@index([isLimited, endsAt])
+}
+
+model GamePlayer {
+  gameId            String
+  game              Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  position          Int          // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9...
+  joinedAt          DateTime     @default(now())
+
+  // Completion & Results
+  placement         Int?         // 1st, 2nd, 3rd, 4th... (set after finish)
+  completionTimeMs  Int?         // Time to complete in milliseconds
+  finalScore        Int?         // Final game score
+  moveCount         Int          @default(0)
+
+  // Payout
+  payoutCents       Int?         // Proportional payout based on placement
+  payoutPercentage  Float?       // What % they won (for display)
+
+  // State Tracking
+  isReady           Boolean      @default(false)  // Ready check
+  isFinished        Boolean      @default(false)  // Completed game
+  finishedAt        DateTime?
+
+  @@id([gameId, userId])
+  @@index([userId, joinedAt(sort: Desc)])
+  @@index([gameId, isFinished])
+}
+
+// ============================================================================
+// Coupons & Welcome Bonuses
+// ============================================================================
+
+model Coupon {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  name            String    // "Welcome Bonus", "$5 Free Play"
+  description     String?
+
+  // Value
+  valueCents      Int       // Bonus amount
+  isBonus         Boolean   @default(true)  // Bonus cash vs real cash
+
+  // Restrictions
+  maxUses         Int       @default(1)     // Per user
+  maxTotalUses    Int?                      // Global cap
+  currentUses     Int       @default(0)
+
+  minDepositCents Int?                      // Require deposit to claim
+  minTierToUse    MatchTier?                // Can only use in certain tiers
+
+  // Validity
+  isActive        Boolean   @default(true)
+  validFrom       DateTime  @default(now())
+  validUntil      DateTime?
+
+  // Relations
+  claims          CouponClaim[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([code])
+  @@index([isActive, validFrom, validUntil])
+}
+
+model CouponClaim {
+  id              String    @id @default(cuid())
+
+  couponId        String
+  coupon          Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  claimedAt       DateTime  @default(now())
+  usedAt          DateTime?
+
+  @@unique([couponId, userId])
+  @@index([userId, claimedAt(sort: Desc)])
 }

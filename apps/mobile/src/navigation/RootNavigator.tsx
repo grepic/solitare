@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/auth.store';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import GameScreen from '../screens/game/GameScreen';
+import { LobbyBrowserScreen } from '../screens/main/LobbyBrowserScreen';
+import { CreateGameScreen } from '../screens/main/CreateGameScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import AgeVerificationScreen from '../screens/settings/AgeVerificationScreen';
 import LeaderboardScreen from '../screens/leaderboard/LeaderboardScreen';
@@ -31,6 +33,8 @@ export default function RootNavigator() {
               gestureEnabled: false,
             }}
           />
+          <Stack.Screen name="LobbyBrowser" component={LobbyBrowserScreen} options={{ headerShown: true, title: 'Game Lobbies' }} />
+          <Stack.Screen name="CreateGame" component={CreateGameScreen} options={{ headerShown: true, title: 'Create Game' }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, title: 'Settings' }} />
           <Stack.Screen name="AgeVerification" component={AgeVerificationScreen} options={{ headerShown: true, title: 'Age Verification' }} />
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ headerShown: true, title: 'Leaderboard' }} />

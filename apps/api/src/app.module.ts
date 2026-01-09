@@ -10,6 +10,7 @@ import { UserModule } from './user/user.module';
 import { UsersModule } from './users/users.module';
 import { WalletModule } from './wallet/wallet.module';
 import { MatchModule } from './match/match.module';
+import { GamesModule } from './games/games.module';
 import { WebSocketModule } from './websocket/websocket.module';
 import { StripeModule } from './stripe/stripe.module';
 import { AdminModule } from './admin/admin.module';
@@ -33,6 +34,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
     UsersModule,
     WalletModule,
     MatchModule,
+    GamesModule,
     WebSocketModule,
     StripeModule,
     AdminModule,

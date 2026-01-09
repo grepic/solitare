@@ -2,6 +2,7 @@
 export * from './types/user.types';
 export * from './types/wallet.types';
 export * from './types/match.types';
+export * from './types/game.types';
 export * from './types/websocket.types';
 
 // DTOs
