@@ -4,8 +4,10 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module';
+import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { UsersModule } from './users/users.module';
 import { WalletModule } from './wallet/wallet.module';
 import { MatchModule } from './match/match.module';
 import { WebSocketModule } from './websocket/websocket.module';
@@ -25,8 +27,10 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
       },
     ]),
     PrismaModule,
+    CommonModule,
     AuthModule,
     UserModule,
+    UsersModule,
     WalletModule,
     MatchModule,
     WebSocketModule,
