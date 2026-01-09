@@ -90,4 +90,9 @@ export class AdminController {
   async getStats() {
     return this.adminService.getStats();
   }
+
+  @Get('revenue-stats')
+  async getRevenueStats() {
+    return this.adminService.getRevenueStats();
+  }
 }

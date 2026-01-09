@@ -213,11 +213,12 @@ export const LobbyBrowserScreen: React.FC<LobbyBrowserScreenProps> = ({
         <FlatList
           data={filteredGames}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <GameCard
               game={item}
               onJoin={() => handleJoinGame(item.id)}
               theme={theme}
+              index={index}
             />
           )}
           contentContainerStyle={styles.listContent}

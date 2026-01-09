@@ -110,4 +110,48 @@ export class AdminService {
       },
     });
   }
+
+  async getRevenueStats() {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Get revenue from finished games (platform fee)
+    const [todayGames, weekGames, monthGames, allGames, activeGames, totalPlayers] = await Promise.all([
+      this.prisma.game.aggregate({
+        where: { status: 'FINISHED', finishedAt: { gte: todayStart } },
+        _sum: { platformFeeCents: true },
+        _count: true,
+        _avg: { maxPlayers: true },
+      }),
+      this.prisma.game.aggregate({
+        where: { status: 'FINISHED', finishedAt: { gte: weekStart } },
+        _sum: { platformFeeCents: true },
+      }),
+      this.prisma.game.aggregate({
+        where: { status: 'FINISHED', finishedAt: { gte: monthStart } },
+        _sum: { platformFeeCents: true },
+      }),
+      this.prisma.game.aggregate({
+        where: { status: 'FINISHED' },
+        _sum: { platformFeeCents: true },
+      }),
+      this.prisma.game.count({
+        where: { status: { in: ['WAITING', 'READY_CHECK', 'IN_PROGRESS'] } },
+      }),
+      this.prisma.user.count({ where: { isActive: true } }),
+    ]);
+
+    return {
+      todayRevenue: todayGames._sum.platformFeeCents || 0,
+      weekRevenue: weekGames._sum.platformFeeCents || 0,
+      monthRevenue: monthGames._sum.platformFeeCents || 0,
+      totalRevenue: allGames._sum.platformFeeCents || 0,
+      activeGames,
+      completedGamesToday: todayGames._count || 0,
+      totalPlayers,
+      averageGameSize: todayGames._avg.maxPlayers || 0,
+    };
+  }
 }
