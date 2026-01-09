@@ -10,7 +10,6 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { useWebSocket } from '../../hooks/useWebSocket';
 import { useAuthStore } from '../../stores/authStore';
 import {
   GameLobbyCard,
@@ -21,6 +20,7 @@ import {
 } from '@solitaire/shared';
 import { GameCard } from '../../components/GameCard';
 import { Button } from '@solitaire/ui-kit';
+import websocketService from '../../services/websocket';
 
 interface LobbyBrowserScreenProps {
   navigation: any;
@@ -30,30 +30,51 @@ export const LobbyBrowserScreen: React.FC<LobbyBrowserScreenProps> = ({
   navigation,
 }) => {
   const { theme } = useTheme();
-  const { socket, isConnected } = useWebSocket();
-  const user = useAuthStore((state) => state.user);
+  const { user, accessToken } = useAuthStore();
 
   const [games, setGames] = useState<GameLobbyCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'all' | MatchTier>('all');
 
   useEffect(() => {
-    if (socket && isConnected) {
+    // Connect to lobby WebSocket on mount
+    if (accessToken) {
+      const lobbySocket = websocketService.connectLobby(accessToken);
+
+      lobbySocket.on('connect', () => {
+        console.log('Lobby connected');
+        setIsConnected(true);
+      });
+
+      lobbySocket.on('disconnect', () => {
+        console.log('Lobby disconnected');
+        setIsConnected(false);
+      });
+
+      return () => {
+        websocketService.disconnectLobby();
+      };
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (isConnected) {
       // Subscribe to lobby updates
-      socket.emit(GameLobbyEvent.LOBBY_SUBSCRIBE, {
+      websocketService.emitLobby(GameLobbyEvent.LOBBY_SUBSCRIBE, {
         tier: selectedTab === 'all' ? undefined : selectedTab,
       });
 
       // Listen for lobby updates
-      socket.on(GameLobbyEvent.LOBBY_UPDATE, handleLobbyUpdate);
+      websocketService.onLobby(GameLobbyEvent.LOBBY_UPDATE, handleLobbyUpdate);
 
       return () => {
-        socket.off(GameLobbyEvent.LOBBY_UPDATE, handleLobbyUpdate);
-        socket.emit(GameLobbyEvent.LOBBY_UNSUBSCRIBE);
+        websocketService.offLobby(GameLobbyEvent.LOBBY_UPDATE, handleLobbyUpdate);
+        websocketService.emitLobby(GameLobbyEvent.LOBBY_UNSUBSCRIBE, {});
       };
     }
-  }, [socket, isConnected, selectedTab]);
+  }, [isConnected, selectedTab]);
 
   const handleLobbyUpdate = useCallback((payload: LobbyUpdatePayload) => {
     setGames(payload.games);
@@ -64,21 +85,21 @@ export const LobbyBrowserScreen: React.FC<LobbyBrowserScreenProps> = ({
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     // Re-subscribe to trigger immediate update
-    if (socket && isConnected) {
-      socket.emit(GameLobbyEvent.LOBBY_SUBSCRIBE, {
+    if (isConnected) {
+      websocketService.emitLobby(GameLobbyEvent.LOBBY_SUBSCRIBE, {
         tier: selectedTab === 'all' ? undefined : selectedTab,
       });
     }
-  }, [socket, isConnected, selectedTab]);
+  }, [isConnected, selectedTab]);
 
   const handleJoinGame = useCallback(
     async (gameId: string) => {
-      if (!socket || !isConnected) {
+      if (!isConnected) {
         Alert.alert('Error', 'Not connected to server');
         return;
       }
 
-      socket.emit(
+      websocketService.emitLobby(
         GameLobbyEvent.GAME_JOIN,
         { gameId } as GameJoinPayload,
         (response: any) => {
@@ -94,7 +115,7 @@ export const LobbyBrowserScreen: React.FC<LobbyBrowserScreenProps> = ({
         },
       );
     },
-    [socket, isConnected, navigation],
+    [isConnected, navigation],
   );
 
   const handleCreateGame = useCallback(() => {

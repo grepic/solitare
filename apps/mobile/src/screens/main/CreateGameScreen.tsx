@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { useWebSocket } from '../../hooks/useWebSocket';
+import { useAuthStore } from '../../stores/authStore';
 import {
   GameLobbyEvent,
   GameCreatePayload,
@@ -18,6 +18,7 @@ import {
   MATCH_TIER_CONFIG,
 } from '@solitaire/shared';
 import { Button } from '@solitaire/ui-kit';
+import websocketService from '../../services/websocket';
 
 const GAME_NAMES = [
   'Gem-a-zing',
@@ -40,7 +41,7 @@ export const CreateGameScreen: React.FC<CreateGameScreenProps> = ({
   navigation,
 }) => {
   const { theme } = useTheme();
-  const { socket, isConnected } = useWebSocket();
+  const { accessToken } = useAuthStore();
 
   const [gameName, setGameName] = useState(
     GAME_NAMES[Math.floor(Math.random() * GAME_NAMES.length)],
@@ -50,11 +51,27 @@ export const CreateGameScreen: React.FC<CreateGameScreenProps> = ({
   const [isLimited, setIsLimited] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(5);
   const [creating, setCreating] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    // Connect to lobby WebSocket on mount
+    if (accessToken) {
+      const lobbySocket = websocketService.connectLobby(accessToken);
+
+      lobbySocket.on('connect', () => {
+        setIsConnected(true);
+      });
+
+      lobbySocket.on('disconnect', () => {
+        setIsConnected(false);
+      });
+    }
+  }, [accessToken]);
 
   const tierConfig = MATCH_TIER_CONFIG[selectedTier];
 
   const handleCreate = async () => {
-    if (!socket || !isConnected) {
+    if (!isConnected) {
       Alert.alert('Error', 'Not connected to server');
       return;
     }
@@ -74,7 +91,7 @@ export const CreateGameScreen: React.FC<CreateGameScreenProps> = ({
       durationMinutes: isLimited ? durationMinutes : undefined,
     };
 
-    socket.emit(GameLobbyEvent.GAME_CREATE, payload, (response: any) => {
+    websocketService.emitLobby(GameLobbyEvent.GAME_CREATE, payload, (response: any) => {
       setCreating(false);
 
       if (response.success) {
