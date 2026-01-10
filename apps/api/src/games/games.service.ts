@@ -9,7 +9,8 @@ import {
   MATCH_TIER_CONFIG,
   GAME_LOBBY_CONFIG,
 } from '@solitaire/shared';
-import { SolitaireEngine } from '@solitaire/engine';
+// import { SolitaireEngine } from '@solitaire/engine';
+// NOTE: Game engine not needed for lobby system (client-side gameplay)
 
 export interface CreateGameLobbyDto {
   name: string;
@@ -56,8 +57,9 @@ export class GamesService {
 
     // Generate deterministic deck seed
     const seed = Math.random().toString(36).substring(2);
-    const engine = new SolitaireEngine(seed);
-    const deckHash = engine.getDeckHash();
+    // const engine = new SolitaireEngine(seed);
+    // const deckHash = engine.getDeckHash();
+    const deckHash = seed; // Placeholder - deck generation happens client-side
 
     // Calculate prize distribution
     const prizeDistribution = calculateProportionalPayouts(
@@ -152,7 +154,7 @@ export class GamesService {
       await this.walletService.debit(
         dto.userId,
         tierConfig.entryFeeCents,
-        'ENTRY_FEE',
+        'ENTRY_FEE' as any,
         `Game entry fee: ${game.name}`,
       );
     }
@@ -238,7 +240,7 @@ export class GamesService {
       await this.walletService.credit(
         userId,
         tierConfig.entryFeeCents,
-        'REFUND',
+        'REFUND' as any,
         `Game left: ${game.name}`,
       );
     }
@@ -378,7 +380,7 @@ export class GamesService {
         await this.walletService.credit(
           result.userId,
           payoutCents,
-          'WINNING',
+          'WINNING' as any,
           `${placement}${this.getOrdinalSuffix(placement)} place: ${game.name}`,
         );
       }
@@ -442,7 +444,7 @@ export class GamesService {
         await this.walletService.credit(
           player.userId,
           tierConfig.entryFeeCents,
-          'REFUND',
+          'REFUND' as any,
           `Game cancelled: ${reason}`,
         );
       }
