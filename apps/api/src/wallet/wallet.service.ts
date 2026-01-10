@@ -170,4 +170,23 @@ export class WalletService {
       data: { status },
     });
   }
+
+  // Alias methods for games service compatibility
+  async debit(
+    userId: string,
+    amountCents: number,
+    type: TransactionType,
+    metadata?: any,
+  ): Promise<void> {
+    return this.deductFunds(userId, amountCents, type, metadata);
+  }
+
+  async credit(
+    userId: string,
+    amountCents: number,
+    type: TransactionType,
+    metadata?: any,
+  ): Promise<void> {
+    return this.addFunds(userId, amountCents, type, undefined, metadata);
+  }
 }

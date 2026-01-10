@@ -9,7 +9,7 @@ import {
   MATCH_TIER_CONFIG,
   GAME_LOBBY_CONFIG,
 } from '@solitaire/shared';
-import { SolitaireEngine } from '@solitaire/solitaire-engine';
+import { SolitaireEngine } from '@solitaire/engine';
 
 export interface CreateGameLobbyDto {
   name: string;
