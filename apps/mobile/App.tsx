@@ -11,6 +11,8 @@ import { useThemeStore } from './src/store/theme.store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { Tutorial } from './src/components/Tutorial';
 import { soundService } from './src/services/sound.service';
+import { gameLoader } from './src/core/services/game-loader';
+import { solitaireConfig } from './src/games/solitaire';
 
 export default function App() {
   const { loadAuth, isLoading, isAuthenticated } = useAuthStore();
@@ -20,6 +22,10 @@ export default function App() {
   useEffect(() => {
     loadAuth();
     checkFirstLaunch();
+
+    // Register games
+    gameLoader.registerGame(solitaireConfig);
+    gameLoader.markInitialized();
 
     // Initialize sound service
     soundService.initialize().catch((err) => {

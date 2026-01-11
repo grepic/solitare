@@ -4,6 +4,7 @@ export * from './types/wallet.types';
 export * from './types/match.types';
 export * from './types/game.types';
 export * from './types/websocket.types';
+export * from './types/game.interface';
 
 // DTOs
 export * from './dto/auth.dto';

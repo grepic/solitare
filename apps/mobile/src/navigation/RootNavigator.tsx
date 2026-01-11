@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/auth.store';
 
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import GameScreen from '../screens/game/GameScreen';
+import { SolitaireGameScreen } from '../games/solitaire';
 import { LobbyBrowserScreen } from '../screens/main/LobbyBrowserScreen';
 import { CreateGameScreen } from '../screens/main/CreateGameScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
@@ -28,7 +28,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Main" component={MainNavigator} />
           <Stack.Screen
             name="Game"
-            component={GameScreen}
+            component={SolitaireGameScreen}
             options={{
               presentation: 'fullScreenModal',
               gestureEnabled: false,
