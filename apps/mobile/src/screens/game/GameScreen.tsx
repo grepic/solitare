@@ -3,12 +3,16 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../store/theme.store';
 import { useGameStore } from '../../store/game.store';
-import { PlayingCard } from '../../components/PlayingCard';
-import { DraggableCard } from '../../components/DraggableCard';
+import { PlayingCardPremium } from '../../components/PlayingCardPremium';
+import { DraggableCardPremium } from '../../components/DraggableCardPremium';
+import { ParticleSystem } from '../../components/ParticleSystem';
+import { WinCelebration } from '../../components/WinCelebration';
 import { DropZone, findDropZone, triggerDrop } from '../../components/DropZone';
 import { MoveType, Suit, getHints, canAutoComplete, getAutoCompleteMoves } from '@solitaire/engine';
 import { Button } from '@solitaire/ui-kit';
 import websocket from '../../services/websocket';
+import { soundService } from '../../services/sound.service';
+import { hapticService } from '../../services/haptic.service';
 
 interface GameScreenProps {
   route: any;
@@ -26,6 +30,15 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showingHint, setShowingHint] = useState(false);
 
+  // Premium features state
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showSparkles, setShowSparkles] = useState(false);
+  const [showWinModal, setShowWinModal] = useState(false);
+  const [cardBackTheme, setCardBackTheme] = useState<'classic' | 'royal' | 'neon' | 'galaxy' | 'gold'>('royal');
+  const [placement, setPlacement] = useState(1);
+  const [totalPlayers, setTotalPlayers] = useState(1);
+  const [payoutCents, setPayoutCents] = useState(0);
+
   useEffect(() => {
     initGame(seed, matchId);
 
@@ -39,8 +52,11 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
           setCountdown((prev) => {
             if (prev <= 1) {
               clearInterval(interval);
+              soundService.playButtonTap();
+              hapticService.success();
               return 0;
             }
+            hapticService.light();
             return prev - 1;
           });
         }, 1000);
@@ -81,31 +97,42 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
   }, [gameState]);
 
   const handleWin = () => {
-    const finalTime = elapsedTime;
-    const finalScore = gameState?.score || 0;
+    // Trigger premium celebrations!
+    setShowConfetti(true);
+    soundService.playWinFanfare();
+    hapticService.winCelebration();
 
-    Alert.alert(
-      '🎉 Victory!',
-      `You completed the game!\n\nTime: ${(finalTime / 1000).toFixed(1)}s\nScore: ${finalScore}`,
-      [{ text: 'OK' }],
-    );
+    // Show win modal after brief delay
+    setTimeout(() => {
+      setShowWinModal(true);
+    }, 500);
+
+    // Stop confetti after 3 seconds
+    setTimeout(() => {
+      setShowConfetti(false);
+    }, 3000);
   };
 
   const handleMatchEnd = (data: any) => {
-    const prize = data.payoutCents / 100;
+    setPlacement(data.placement || 1);
+    setTotalPlayers(data.totalPlayers || 1);
+    setPayoutCents(data.payoutCents || 0);
 
-    Alert.alert(
-      data.reason === 'COMPLETED' ? '🏆 Match Complete!' : 'Match Ended',
-      data.winnerId
-        ? `Winner: You!\nPrize: $${prize.toFixed(2)}`
-        : 'Match ended - returning to lobby',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('Home'),
-        },
-      ],
-    );
+    if (data.reason === 'COMPLETED') {
+      handleWin();
+    } else {
+      // Non-completion - just navigate back
+      Alert.alert(
+        'Match Ended',
+        'Returning to lobby',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Home'),
+          },
+        ],
+      );
+    }
   };
 
   const handleDragStart = (type: string, index?: number, cardIndex?: number) => {
@@ -150,13 +177,34 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
         };
       }
 
-      if (move && makeMove(move)) {
-        websocket.emit('MOVE', {
-          matchId,
-          seq: moveSequence,
-          moveType: move.type,
-          payload: move,
-        });
+      if (move) {
+        const result = makeMove(move);
+
+        if (result.success) {
+          // Success feedback!
+          const isFoundationMove = move.type === MoveType.WASTE_TO_FOUNDATION ||
+                                   move.type === MoveType.TABLEAU_TO_FOUNDATION;
+
+          if (isFoundationMove) {
+            soundService.playFoundationDrop();
+            setShowSparkles(true);
+            setTimeout(() => setShowSparkles(false), 800);
+          } else {
+            soundService.playCardSnap();
+          }
+          hapticService.cardDrop();
+
+          websocket.emit('MOVE', {
+            matchId,
+            seq: moveSequence,
+            moveType: move.type,
+            payload: move,
+          });
+        } else {
+          // Error feedback
+          soundService.playErrorBuzz();
+          hapticService.invalidMove();
+        }
       }
     }
 
@@ -359,7 +407,11 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
             {/* Stock Pile */}
             <TouchableOpacity onPress={() => handleCardPress('stock')}>
               {gameState.stock.length > 0 ? (
-                <PlayingCard card={gameState.stock[0]} isSelected={selectedPile?.type === 'stock'} />
+                <PlayingCardPremium
+                  card={gameState.stock[0]}
+                  cardBackTheme={cardBackTheme}
+                  isSelected={selectedPile?.type === 'stock'}
+                />
               ) : (
                 <View style={styles(theme).emptyPile}>
                   <Text style={styles(theme).emptyPileText}>↻</Text>
@@ -370,8 +422,9 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
             {/* Waste Pile */}
             <TouchableOpacity onPress={() => handleCardPress('waste')}>
               {gameState.waste.length > 0 ? (
-                <DraggableCard
+                <DraggableCardPremium
                   card={gameState.waste[gameState.waste.length - 1]}
+                  cardBackTheme={cardBackTheme}
                   isSelected={selectedPile?.type === 'waste'}
                   onDragStart={() => handleDragStart('waste')}
                   onDragEnd={handleDragEnd}
@@ -388,8 +441,9 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
               <DropZone key={suit} id={`foundation-${index}`}>
                 <TouchableOpacity onPress={() => handleCardPress('foundation', index)}>
                   {gameState.foundation[suit].length > 0 ? (
-                    <PlayingCard
+                    <PlayingCardPremium
                       card={gameState.foundation[suit][gameState.foundation[suit].length - 1]}
+                      cardBackTheme={cardBackTheme}
                       isSelected={selectedPile?.type === 'foundation' && selectedPile?.index === index}
                     />
                   ) : (
@@ -423,8 +477,9 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
                           marginTop: cardIndex === 0 ? 0 : 24,
                         }}
                       >
-                        <DraggableCard
+                        <DraggableCardPremium
                           card={card}
+                          cardBackTheme={cardBackTheme}
                           isSelected={
                             selectedPile?.type === 'tableau' &&
                             selectedPile?.index === pileIndex &&
@@ -459,6 +514,35 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
           <Button title="Resign" onPress={handleResign} variant="danger" theme={theme} size="small" />
         </View>
       </LinearGradient>
+
+      {/* Premium Particle Effects */}
+      <ParticleSystem
+        type="confetti"
+        count={30}
+        duration={2000}
+        active={showConfetti}
+      />
+
+      <ParticleSystem
+        type="sparkle"
+        count={15}
+        duration={800}
+        active={showSparkles}
+      />
+
+      {/* Win Celebration Modal */}
+      <WinCelebration
+        visible={showWinModal}
+        placement={placement}
+        totalPlayers={totalPlayers}
+        completionTimeMs={elapsedTime}
+        score={gameState?.score || 0}
+        payoutCents={payoutCents}
+        onContinue={() => {
+          setShowWinModal(false);
+          navigation.navigate('Home');
+        }}
+      />
     </View>
   );
 }

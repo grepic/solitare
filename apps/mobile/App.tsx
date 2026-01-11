@@ -10,6 +10,7 @@ import { useAuthStore } from './src/store/auth.store';
 import { useThemeStore } from './src/store/theme.store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { Tutorial } from './src/components/Tutorial';
+import { soundService } from './src/services/sound.service';
 
 export default function App() {
   const { loadAuth, isLoading, isAuthenticated } = useAuthStore();
@@ -19,6 +20,15 @@ export default function App() {
   useEffect(() => {
     loadAuth();
     checkFirstLaunch();
+
+    // Initialize sound service
+    soundService.initialize().catch((err) => {
+      console.warn('Failed to initialize sound service:', err);
+    });
+
+    return () => {
+      soundService.cleanup();
+    };
   }, []);
 
   const checkFirstLaunch = async () => {
