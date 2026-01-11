@@ -199,9 +199,9 @@ export class GamesService {
     await this.complianceAuditService.log({
       userId: dto.userId,
       action: 'GAME_JOIN',
-      resource: 'game',
-      resourceId: game.id,
-      metadata: {
+      entity: 'game',
+      entityId: game.id,
+      changes: {
         tier: game.tier,
         entryFeeCents: tierConfig.entryFeeCents,
       },
@@ -400,9 +400,9 @@ export class GamesService {
       await this.complianceAuditService.log({
         userId: result.userId,
         action: 'GAME_FINISH',
-        resource: 'game',
-        resourceId: game.id,
-        metadata: {
+        entity: 'game',
+        entityId: game.id,
+        changes: {
           placement,
           payoutCents,
           completionTimeMs: result.completionTimeMs,

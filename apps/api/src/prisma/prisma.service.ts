@@ -33,6 +33,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   dailyChallenge: any;
   restrictedRegion: any;
   rateLimitEntry: any;
+  stripeWebhookEvent: any;
+  dispute: any;
+  configFlag: any;
 
   constructor(private config: ConfigService) {
     const databaseUrl = this.config.get('DATABASE_URL');
@@ -63,6 +66,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     this.dailyChallenge = this.createModel('DailyChallenge');
     this.restrictedRegion = this.createModel('RestrictedRegion');
     this.rateLimitEntry = this.createModel('RateLimitEntry');
+    this.stripeWebhookEvent = this.createModel('StripeWebhookEvent');
+    this.dispute = this.createModel('Dispute');
+    this.configFlag = this.createModel('ConfigFlag');
   }
 
   async onModuleInit() {
@@ -421,7 +427,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
       // Create transaction client with same model structure
       const txClient: any = {};
       ['user', 'userProfile', 'wallet', 'transaction', 'game', 'gamePlayer',
-       'match', 'matchPlayer', 'refreshToken', 'coupon', 'couponClaim'].forEach(model => {
+       'match', 'matchPlayer', 'matchMove', 'refreshToken', 'coupon', 'couponClaim',
+       'withdrawalRequest', 'ageVerificationRequest', 'auditLog', 'dailyChallenge',
+       'restrictedRegion', 'rateLimitEntry', 'stripeWebhookEvent', 'dispute', 'configFlag'].forEach(model => {
         txClient[model] = this.createTransactionModel(client, model);
       });
 

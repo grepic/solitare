@@ -16,7 +16,7 @@ export class StripeService {
     private walletService: WalletService,
   ) {
     this.stripe = new Stripe(this.config.get('STRIPE_SECRET_KEY')!, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2023-10-16',
     });
   }
 
@@ -71,8 +71,8 @@ export class StripeService {
       // Verify webhook signature - this prevents unauthorized requests
       event = this.stripe.webhooks.constructEvent(rawBody, signature, webhookSecret!);
     } catch (err) {
-      console.error('Webhook signature verification failed:', err.message);
-      throw new BadRequestException(`Webhook signature verification failed: ${err.message}`);
+      console.error('Webhook signature verification failed:', (err as any).message);
+      throw new BadRequestException(`Webhook signature verification failed: ${(err as any).message}`);
     }
 
     // Prevent replay attacks - reject events older than 5 minutes

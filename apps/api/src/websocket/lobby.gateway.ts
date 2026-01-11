@@ -131,8 +131,8 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       return { success: true, gameId: game.id };
     } catch (error) {
-      this.logger.error(`Failed to create game: ${error.message}`);
-      return { success: false, error: error.message };
+      this.logger.error(`Failed to create game: ${(error as any).message}`);
+      return { success: false, error: (error as any).message };
     }
   }
 
@@ -174,8 +174,8 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       return { success: true, game };
     } catch (error) {
-      this.logger.error(`Failed to join game: ${error.message}`);
-      return { success: false, error: error.message };
+      this.logger.error(`Failed to join game: ${(error as any).message}`);
+      return { success: false, error: (error as any).message };
     }
   }
 
@@ -207,8 +207,8 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       return { success: true };
     } catch (error) {
-      this.logger.error(`Failed to leave game: ${error.message}`);
-      return { success: false, error: error.message };
+      this.logger.error(`Failed to leave game: ${(error as any).message}`);
+      return { success: false, error: (error as any).message };
     }
   }
 
@@ -330,7 +330,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.to(socketId).emit(GameLobbyEvent.LOBBY_UPDATE, payload);
       }
     } catch (error) {
-      this.logger.error(`Failed to broadcast lobby update: ${error.message}`);
+      this.logger.error(`Failed to broadcast lobby update: ${(error as any).message}`);
     }
   }
 
