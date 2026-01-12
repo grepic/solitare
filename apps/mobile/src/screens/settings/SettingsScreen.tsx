@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
 import { Button } from '@solitaire/ui-kit';
 import { useThemeStore } from '../../store/theme.store';
 import { useAuthStore } from '../../store/auth.store';
@@ -7,7 +7,7 @@ import { soundService } from '../../services/sound';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen({ navigation }: any) {
-  const { theme, toggleTheme } = useThemeStore();
+  const { theme, mode, setThemeMode } = useThemeStore();
   const { logout } = useAuthStore();
 
   const [soundEnabled, setSoundEnabled] = useState(soundService.isEnabled());
@@ -47,6 +47,48 @@ export default function SettingsScreen({ navigation }: any) {
       contentContainerStyle={styles(theme).content}
     >
       <Text style={[styles(theme).title, { color: theme.colors.text }]}>Settings</Text>
+
+      {/* Appearance */}
+      <View style={styles(theme).section}>
+        <Text style={[styles(theme).sectionTitle, { color: theme.colors.text }]}>Appearance</Text>
+
+        <View style={styles(theme).themeSelector}>
+          {(['light', 'dark', 'system'] as const).map((themeMode) => (
+            <TouchableOpacity
+              key={themeMode}
+              style={[
+                styles(theme).themeOption,
+                mode === themeMode && styles(theme).themeOptionActive,
+                {
+                  backgroundColor: mode === themeMode
+                    ? theme.colors.primary
+                    : theme.colors.surface
+                }
+              ]}
+              onPress={() => setThemeMode(themeMode)}
+            >
+              <Text
+                style={[
+                  styles(theme).themeOptionText,
+                  {
+                    color: mode === themeMode ? '#FFFFFF' : theme.colors.text,
+                  },
+                ]}
+              >
+                {themeMode === 'light' && '☀️ Light'}
+                {themeMode === 'dark' && '🌙 Dark'}
+                {themeMode === 'system' && '⚙️ System'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={[styles(theme).themeDescription, { color: theme.colors.textSecondary }]}>
+          {mode === 'system'
+            ? 'Theme will match your device settings'
+            : `Using ${mode} theme`}
+        </Text>
+      </View>
 
       {/* Audio Settings */}
       <View style={styles(theme).section}>
@@ -153,5 +195,36 @@ const styles = (theme: any) =>
       ...theme.typography.caption,
       textAlign: 'center',
       marginTop: theme.spacing.xxl,
+    },
+    themeSelector: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+    },
+    themeOption: {
+      flex: 1,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.sm,
+      borderRadius: theme.radius.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    themeOptionActive: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    themeOptionText: {
+      ...theme.typography.body,
+      fontWeight: '600',
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    themeDescription: {
+      ...theme.typography.caption,
+      fontSize: 12,
+      textAlign: 'center',
     },
   });

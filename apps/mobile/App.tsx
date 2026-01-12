@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ENV from './src/config/env';
@@ -17,12 +18,22 @@ import { solitaireConfig } from './src/games/solitaire';
 
 export default function App() {
   const { loadAuth, isLoading, isAuthenticated } = useAuthStore();
-  const { theme } = useThemeStore();
+  const { theme, initialize: initializeTheme, setSystemColorScheme } = useThemeStore();
   const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     loadAuth();
     checkFirstLaunch();
+
+    // Initialize theme
+    initializeTheme().catch((err) => {
+      console.warn('Failed to initialize theme:', err);
+    });
+
+    // Listen for system appearance changes
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setSystemColorScheme(colorScheme);
+    });
 
     // Register games
     gameLoader.registerGame(solitaireConfig);
@@ -35,6 +46,7 @@ export default function App() {
 
     return () => {
       soundService.cleanup();
+      subscription.remove();
     };
   }, []);
 
