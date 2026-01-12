@@ -10,6 +10,7 @@ import { useAuthStore } from './src/store/auth.store';
 import { useThemeStore } from './src/store/theme.store';
 import RootNavigator from './src/navigation/RootNavigator';
 import { Tutorial } from './src/components/Tutorial';
+import { GlobalErrorBoundary } from './src/components/GlobalErrorBoundary';
 import { soundService } from './src/services/sound.service';
 import { gameLoader } from './src/core/services/game-loader';
 import { solitaireConfig } from './src/games/solitaire';
@@ -65,16 +66,18 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <StripeProvider publishableKey={ENV.STRIPE_PUBLISHABLE_KEY}>
-        <NavigationContainer>
-          <StatusBar style={theme.isDark ? 'light' : 'dark'} />
-          <RootNavigator />
-          {isAuthenticated && (
-            <Tutorial visible={showTutorial} onComplete={handleTutorialComplete} theme={theme} />
-          )}
-        </NavigationContainer>
-      </StripeProvider>
-    </SafeAreaProvider>
+    <GlobalErrorBoundary>
+      <SafeAreaProvider>
+        <StripeProvider publishableKey={ENV.STRIPE_PUBLISHABLE_KEY}>
+          <NavigationContainer>
+            <StatusBar style={theme.isDark ? 'light' : 'dark'} />
+            <RootNavigator />
+            {isAuthenticated && (
+              <Tutorial visible={showTutorial} onComplete={handleTutorialComplete} theme={theme} />
+            )}
+          </NavigationContainer>
+        </StripeProvider>
+      </SafeAreaProvider>
+    </GlobalErrorBoundary>
   );
 }
