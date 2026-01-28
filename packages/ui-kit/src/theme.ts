@@ -96,9 +96,9 @@ export const lightColors = {
   cardRed: '#DC2626',
   cardBlack: '#1F2937',
   tableauGreen: '#059669',
-} as const;
+};
 
-export const darkColors = {
+export const darkColors: typeof lightColors = {
   // Primary
   primary: '#818CF8',
   primaryDark: '#6366F1',
@@ -140,7 +140,7 @@ export const darkColors = {
   cardRed: '#F87171',
   cardBlack: '#F9FAFB',
   tableauGreen: '#047857',
-} as const;
+};
 
 export type Theme = {
   colors: typeof lightColors;

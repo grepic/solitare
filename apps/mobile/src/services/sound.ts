@@ -1,10 +1,24 @@
-import { Audio } from 'expo-av';
+import { Platform } from 'react-native';
+
+type ExpoAvModule = typeof import('expo-av');
+
+function getExpoAv(): ExpoAvModule | null {
+  if (Platform.OS === 'web') return null;
+  try {
+    return require('expo-av') as ExpoAvModule;
+  } catch {
+    return null;
+  }
+}
 
 class SoundService {
-  private sounds: Map<string, Audio.Sound> = new Map();
+  private sounds: Map<string, any> = new Map();
   private enabled: boolean = true;
 
   async loadSounds() {
+    const expoAv = getExpoAv();
+    if (!expoAv) return;
+
     try {
       // Load sound effects
       const soundFiles = {
@@ -18,7 +32,7 @@ class SoundService {
 
       for (const [key, source] of Object.entries(soundFiles)) {
         try {
-          const { sound } = await Audio.Sound.createAsync(source);
+          const { sound } = await expoAv.Audio.Sound.createAsync(source);
           this.sounds.set(key, sound);
         } catch (err) {
           console.warn(`Failed to load sound: ${key}`);
@@ -31,6 +45,7 @@ class SoundService {
 
   async play(soundName: string) {
     if (!this.enabled) return;
+    if (Platform.OS === 'web') return;
 
     const sound = this.sounds.get(soundName);
     if (sound) {
@@ -51,6 +66,11 @@ class SoundService {
   }
 
   async unloadAll() {
+    if (Platform.OS === 'web') {
+      this.sounds.clear();
+      return;
+    }
+
     for (const sound of this.sounds.values()) {
       await sound.unloadAsync();
     }

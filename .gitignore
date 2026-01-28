@@ -10,6 +10,9 @@ coverage/
 dist/
 build/
 
+# Expo web export output
+apps/mobile/dist/
+
 # Environment
 .env
 .env.local
@@ -21,6 +24,20 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# TypeScript incremental/build artifacts
+*.tsbuildinfo
+
+# Emitted TS outputs (should live in dist/, which is already ignored)
+*.d.ts
+*.d.ts.map
+*.js.map
+*.map
+
+# If TS emit accidentally happens without outDir, it creates JS next to TS.
+# We never want that in source folders.
+**/src/**/*.js
+**/prisma/**/*.js
 
 # OS
 .DS_Store
@@ -36,6 +53,7 @@ Thumbs.db
 # Expo
 .expo/
 .expo-shared/
+expo.pid
 
 # React Native
 *.jks

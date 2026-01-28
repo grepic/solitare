@@ -7,7 +7,6 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Button } from '@solitaire/ui-kit';
 
 interface Props {
   children: ReactNode;

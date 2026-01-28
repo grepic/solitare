@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '@solitaire/ui-kit';
-import { ParticleSystem } from './ParticleSystem';
+import { ParticleSystem } from '../../../components/ParticleSystem';
 import { soundService } from '../../../services/sound.service';
 import { hapticService } from '../../../services/haptic.service';
+import { useThemeStore } from '../../../store/theme.store';
 
 interface WinCelebrationProps {
   visible: boolean;
@@ -33,6 +34,8 @@ export const WinCelebration: React.FC<WinCelebrationProps> = ({
   payoutCents,
   onContinue,
 }) => {
+  const { theme } = useThemeStore();
+
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -198,16 +201,17 @@ export const WinCelebration: React.FC<WinCelebrationProps> = ({
 
             {/* Continue button */}
             <Button
-              variant="solid"
+              title="Continue"
+              theme={theme}
+              variant="primary"
               onPress={() => {
                 hapticService.buttonTap();
                 soundService.playButtonTap();
                 onContinue();
               }}
               style={styles.continueButton}
-            >
-              <Text style={styles.continueButtonText}>Continue</Text>
-            </Button>
+              textStyle={styles.continueButtonText}
+            />
           </LinearGradient>
         </Animated.View>
       </View>

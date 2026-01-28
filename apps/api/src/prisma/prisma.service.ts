@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Pool, PoolClient } from 'pg';
 
@@ -38,7 +38,21 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   configFlag: any;
 
   constructor(private config: ConfigService) {
-    const databaseUrl = this.config.get('DATABASE_URL');
+    const nodeEnv = this.config.get<string>('NODE_ENV') ?? 'development';
+    let databaseUrl = this.config.get<string>('DATABASE_URL');
+
+    if (!databaseUrl) {
+      if (nodeEnv === 'production') {
+        throw new Error('DATABASE_URL is required in production');
+      }
+
+      databaseUrl =
+        'postgresql://solitaire:solitaire_dev_password@localhost:5432/solitaire_db?schema=public';
+      Logger.warn(
+        'DATABASE_URL is not set; using default local docker-compose connection string',
+        PrismaService.name,
+      );
+    }
 
     this.pool = new Pool({
       connectionString: databaseUrl,

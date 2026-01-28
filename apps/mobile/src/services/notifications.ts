@@ -1,18 +1,69 @@
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import api from './api';
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+import type {
+  Notification as ExpoNotification,
+  NotificationResponse as ExpoNotificationResponse,
+  Subscription as ExpoNotificationSubscription,
+} from 'expo-notifications';
+
+type NotificationModule = typeof import('expo-notifications');
+type DeviceModule = typeof import('expo-device');
+
+type NotificationSubscription = Pick<ExpoNotificationSubscription, 'remove'>;
+
+let cachedNotifications: NotificationModule | null = null;
+let cachedDevice: DeviceModule | null = null;
+let didConfigureHandler = false;
+
+function getNotifications(): NotificationModule | null {
+  if (Platform.OS === 'web') return null;
+  if (cachedNotifications) return cachedNotifications;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    cachedNotifications = require('expo-notifications');
+    return cachedNotifications;
+  } catch {
+    return null;
+  }
+}
+
+function getDevice(): DeviceModule | null {
+  if (Platform.OS === 'web') return null;
+  if (cachedDevice) return cachedDevice;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    cachedDevice = require('expo-device');
+    return cachedDevice;
+  } catch {
+    return null;
+  }
+}
+
+function ensureNotificationHandlerConfigured(): void {
+  const Notifications = getNotifications();
+  if (!Notifications) return;
+  if (didConfigureHandler) return;
+  didConfigureHandler = true;
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 export async function registerForPushNotifications(): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
+
+  const Notifications = getNotifications();
+  const Device = getDevice();
+  if (!Notifications || !Device) return null;
+
+  ensureNotificationHandlerConfigured();
+
   if (!Device.isDevice) {
     console.log('Push notifications only work on physical devices');
     return null;
@@ -61,6 +112,11 @@ export async function savePushToken(token: string) {
 }
 
 export async function scheduleLocalNotification(title: string, body: string, data?: any) {
+  const Notifications = getNotifications();
+  if (!Notifications) return;
+
+  ensureNotificationHandlerConfigured();
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title,
@@ -72,13 +128,23 @@ export async function scheduleLocalNotification(title: string, body: string, dat
 }
 
 export function addNotificationReceivedListener(
-  listener: (notification: Notifications.Notification) => void
+  listener: (notification: ExpoNotification) => void
 ) {
+  const Notifications = getNotifications();
+  if (!Notifications) return { remove: () => undefined } satisfies NotificationSubscription;
+
+  ensureNotificationHandlerConfigured();
+
   return Notifications.addNotificationReceivedListener(listener);
 }
 
 export function addNotificationResponseReceivedListener(
-  listener: (response: Notifications.NotificationResponse) => void
+  listener: (response: ExpoNotificationResponse) => void
 ) {
+  const Notifications = getNotifications();
+  if (!Notifications) return { remove: () => undefined } satisfies NotificationSubscription;
+
+  ensureNotificationHandlerConfigured();
+
   return Notifications.addNotificationResponseReceivedListener(listener);
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card as CardType, Suit, Rank } from '@solitaire/engine';
-import { useThemeStore } from '../../store/theme.store';
+import { useThemeStore } from '../store/theme.store';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface CardProps {

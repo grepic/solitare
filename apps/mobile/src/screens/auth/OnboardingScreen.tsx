@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Button } from '@solitaire/ui-kit';
 import { useThemeStore } from '../../store/theme.store';
+import { useAuthStore } from '../../store/auth.store';
+import api from '../../services/api';
+import ENV from '../../config/env';
 
 export default function OnboardingScreen({ navigation }: any) {
   const { theme } = useThemeStore();
+  const { setAuth } = useAuthStore();
   const [currentPage, setCurrentPage] = useState(0);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
+
+  const showDemoLogin =
+    __DEV__ ||
+    (Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('debug') === '1');
+
+  const DEMO_EMAIL = 'player1@test.com';
+  const DEMO_PASSWORD = 'test123';
 
   const pages = [
     {
@@ -27,6 +42,35 @@ export default function OnboardingScreen({ navigation }: any) {
       setCurrentPage(currentPage + 1);
     } else {
       navigation.navigate('Login');
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setDemoLoading(true);
+    setDemoError(null);
+    setDemoError('Attempting demo login…');
+    try {
+      const { data } = await api.post('/auth/login', {
+        email: DEMO_EMAIL,
+        password: DEMO_PASSWORD,
+      });
+      await setAuth(data);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        (error?.message
+          ? `Demo login failed: ${error.message}`
+          : 'Demo login failed (is the API running and seeded?)');
+      console.error('Demo login failed (onboarding)', {
+        apiUrl: ENV.API_URL,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+      setDemoError(message);
+      Alert.alert('Error', message);
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -70,6 +114,25 @@ export default function OnboardingScreen({ navigation }: any) {
           variant="ghost"
           theme={theme}
         />
+
+        {showDemoLogin ? (
+          <Button
+            title={`Demo login (${DEMO_EMAIL})`}
+            onPress={handleDemoLogin}
+            variant="secondary"
+            theme={theme}
+            loading={demoLoading}
+            disabled={demoLoading}
+          />
+        ) : null}
+
+        {showDemoLogin ? (
+          <Text style={{ color: theme.colors.textSecondary, marginTop: 8 }}>
+            API: {ENV.API_URL}
+          </Text>
+        ) : null}
+
+        {demoError ? <Text style={{ color: '#DC2626', marginTop: 8 }}>{demoError}</Text> : null}
       </View>
     </View>
   );

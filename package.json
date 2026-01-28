@@ -10,6 +10,9 @@
   "scripts": {
     "dev:api": "yarn workspace @solitaire/api dev",
     "dev:mobile": "yarn workspace @solitaire/mobile start",
+    "dev:mobile:tunnel": "yarn workspace @solitaire/mobile start:tunnel",
+    "dev:mobile:web": "yarn workspace @solitaire/mobile web",
+    "dev:mobile:web:tunnel": "yarn workspace @solitaire/mobile web:tunnel",
     "build:api": "yarn workspace @solitaire/api build",
     "build:mobile": "yarn workspace @solitaire/mobile build",
     "test": "yarn workspaces run test",

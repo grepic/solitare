@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Button, Input } from '@solitaire/ui-kit';
 import { useThemeStore } from '../../store/theme.store';
 import { useAuthStore } from '../../store/auth.store';
 import api from '../../services/api';
+import ENV from '../../config/env';
 
 export default function RegisterScreen({ navigation }: any) {
   const { theme } = useThemeStore();
   const { setAuth } = useAuthStore();
+  const [demoError, setDemoError] = useState<string | null>(null);
+
+  const showDemoLogin =
+    __DEV__ ||
+    (Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('debug') === '1');
+
+  const DEMO_EMAIL = 'player1@test.com';
+  const DEMO_PASSWORD = 'test123';
 
   const [formData, setFormData] = useState({
     email: '',
@@ -20,12 +31,43 @@ export default function RegisterScreen({ navigation }: any) {
 
   const handleRegister = async () => {
     setLoading(true);
+    setDemoError(null);
 
     try {
       const { data } = await api.post('/auth/register', formData);
       await setAuth(data);
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    setDemoError(null);
+    setDemoError('Attempting demo login…');
+
+    try {
+      const { data } = await api.post('/auth/login', {
+        email: DEMO_EMAIL,
+        password: DEMO_PASSWORD,
+      });
+      await setAuth(data);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        (error?.message
+          ? `Demo login failed: ${error.message}`
+          : 'Demo login failed (is the API running and seeded?)');
+      console.error('Demo login failed (register)', {
+        apiUrl: ENV.API_URL,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+      setDemoError(message);
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }
@@ -42,6 +84,12 @@ export default function RegisterScreen({ navigation }: any) {
       </Text>
 
       <View style={styles(theme).form}>
+        {showDemoLogin ? (
+          <Text style={{ color: theme.colors.textSecondary }}>API: {ENV.API_URL}</Text>
+        ) : null}
+
+        {demoError ? <Text style={{ color: '#DC2626' }}>{demoError}</Text> : null}
+
         <Input
           label="Email"
           value={formData.email}
@@ -88,6 +136,16 @@ export default function RegisterScreen({ navigation }: any) {
           loading={loading}
           theme={theme}
         />
+
+        {showDemoLogin ? (
+          <Button
+            title={`Demo login (${DEMO_EMAIL})`}
+            onPress={handleDemoLogin}
+            variant="secondary"
+            theme={theme}
+            disabled={loading}
+          />
+        ) : null}
 
         <Button
           title="Already have an account? Sign In"

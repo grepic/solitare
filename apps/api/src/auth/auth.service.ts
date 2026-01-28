@@ -321,6 +321,7 @@ export class AuthService {
       { expiresIn: this.config.get('JWT_ACCESS_EXPIRY') || '15m' },
     );
 
+    const refreshTokenId = nanoid();
     const refreshToken = nanoid(64);
     const refreshExpiry = this.config.get('JWT_REFRESH_EXPIRY') || '7d';
     const expiresAt = new Date();
@@ -328,6 +329,7 @@ export class AuthService {
 
     await this.prisma.refreshToken.create({
       data: {
+        id: refreshTokenId,
         userId,
         token: refreshToken,
         expiresAt,

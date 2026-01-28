@@ -240,7 +240,7 @@ class AnalyticsService {
     await this.logEvent('share', {
       content_type: contentType,
       method, // 'facebook', 'twitter', 'copy_link'
-      item_id: contentId,
+      ...(contentId ? { item_id: contentId } : {}),
     });
   }
 

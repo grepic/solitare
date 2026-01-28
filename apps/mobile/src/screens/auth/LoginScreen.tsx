@@ -4,11 +4,19 @@ import { Button, Input } from '@solitaire/ui-kit';
 import { useThemeStore } from '../../store/theme.store';
 import { useAuthStore } from '../../store/auth.store';
 import api from '../../services/api';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import ENV from '../../config/env';
 import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
 
-WebBrowser.maybeCompleteAuthSession();
+function maybeCompleteAuthSessionSafe() {
+  if (Platform.OS !== 'web') return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const WebBrowser = require('expo-web-browser') as typeof import('expo-web-browser');
+    WebBrowser.maybeCompleteAuthSession?.();
+  } catch {
+    // ignore
+  }
+}
 
 export default function LoginScreen({ navigation }: any) {
   const { theme } = useThemeStore();
@@ -18,7 +26,9 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [inlineError, setInlineError] = useState<string | null>(null);
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
+  const [appleAuthModule, setAppleAuthModule] = useState<any>(null);
 
   // Google OAuth configuration
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
@@ -29,8 +39,23 @@ export default function LoginScreen({ navigation }: any) {
   });
 
   useEffect(() => {
-    // Check if Apple Authentication is available
-    AppleAuthentication.isAvailableAsync().then(setAppleAuthAvailable);
+    maybeCompleteAuthSessionSafe();
+
+    if (Platform.OS !== 'ios') {
+      setAppleAuthAvailable(false);
+      return;
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const AppleAuthentication = require('expo-apple-authentication');
+      setAppleAuthModule(AppleAuthentication);
+      AppleAuthentication.isAvailableAsync()
+        .then(setAppleAuthAvailable)
+        .catch(() => setAppleAuthAvailable(false));
+    } catch {
+      setAppleAuthAvailable(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -39,15 +64,63 @@ export default function LoginScreen({ navigation }: any) {
     }
   }, [googleResponse]);
 
+  const showDemoLogin =
+    __DEV__ ||
+    (Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('debug') === '1');
+
+  const DEMO_EMAIL = 'player1@test.com';
+  const DEMO_PASSWORD = 'test123';
+
   const handleLogin = async () => {
     setLoading(true);
     setErrors({});
+    setInlineError(null);
 
     try {
       const { data } = await api.post('/auth/login', { email, password });
       await setAuth(data);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Login failed');
+      const message =
+        error?.response?.data?.message ||
+        (error?.message ? `Login failed: ${error.message}` : 'Login failed');
+      console.error('Login failed', {
+        apiUrl: ENV.API_URL,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+      setInlineError(message);
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    setErrors({});
+    setInlineError(null);
+    setInlineError('Attempting demo login…');
+
+    try {
+      const { data } = await api.post('/auth/login', { email: DEMO_EMAIL, password: DEMO_PASSWORD });
+      await setAuth(data);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        (error?.message
+          ? `Demo login failed: ${error.message}`
+          : 'Demo login failed (is the API running and seeded?)');
+      console.error('Demo login failed', {
+        apiUrl: ENV.API_URL,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+      setInlineError(message);
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }
@@ -55,10 +128,15 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleAppleAuth = async () => {
     try {
-      const credential = await AppleAuthentication.signInAsync({
+      if (!appleAuthModule) {
+        Alert.alert('Error', 'Apple Sign In is not available');
+        return;
+      }
+
+      const credential = await appleAuthModule.signInAsync({
         requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          appleAuthModule.AppleAuthenticationScope.FULL_NAME,
+          appleAuthModule.AppleAuthenticationScope.EMAIL,
         ],
       });
 
@@ -98,6 +176,8 @@ export default function LoginScreen({ navigation }: any) {
     }
   };
 
+  const AppleButton = appleAuthModule?.AppleAuthenticationButton;
+
   return (
     <ScrollView
       style={[styles(theme).container, { backgroundColor: theme.colors.background }]}
@@ -109,6 +189,16 @@ export default function LoginScreen({ navigation }: any) {
       </Text>
 
       <View style={styles(theme).form}>
+        {showDemoLogin ? (
+          <Text style={{ color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
+            API: {ENV.API_URL}
+          </Text>
+        ) : null}
+
+        {inlineError ? (
+          <Text style={{ color: '#DC2626', marginBottom: theme.spacing.sm }}>{inlineError}</Text>
+        ) : null}
+
         <Input
           label="Email"
           value={email}
@@ -138,6 +228,17 @@ export default function LoginScreen({ navigation }: any) {
           style={{ marginTop: theme.spacing.lg }}
         />
 
+        {showDemoLogin ? (
+          <Button
+            title={`Demo login (${DEMO_EMAIL})`}
+            onPress={handleDemoLogin}
+            variant="secondary"
+            theme={theme}
+            disabled={loading}
+            loading={loading}
+          />
+        ) : null}
+
         <View style={styles(theme).divider}>
           <View style={styles(theme).dividerLine} />
           <Text style={[styles(theme).dividerText, { color: theme.colors.textSecondary }]}>OR</Text>
@@ -145,15 +246,15 @@ export default function LoginScreen({ navigation }: any) {
         </View>
 
         {/* Apple Sign In - iOS only */}
-        {appleAuthAvailable && Platform.OS === 'ios' && (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+        {appleAuthAvailable && Platform.OS === 'ios' && AppleButton ? (
+          <AppleButton
+            buttonType={appleAuthModule.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={appleAuthModule.AppleAuthenticationButtonStyle.BLACK}
             cornerRadius={8}
             style={styles(theme).appleButton}
             onPress={handleAppleAuth}
           />
-        )}
+        ) : null}
 
         {/* Google Sign In */}
         <Button

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { Theme } from '../theme';
 
 interface ToastProps {
@@ -23,6 +23,8 @@ export const Toast: React.FC<ToastProps> = ({
   const opacity = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     if (visible) {
       Animated.parallel([
         Animated.spring(translateY, {
@@ -38,15 +40,17 @@ export const Toast: React.FC<ToastProps> = ({
         }),
       ]).start();
 
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         hideToast();
       }, duration);
-
-      return () => clearTimeout(timer);
     } else {
       hideToast();
     }
-  }, [visible]);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [visible, duration]);
 
   const hideToast = () => {
     Animated.parallel([

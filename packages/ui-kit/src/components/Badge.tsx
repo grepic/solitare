@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useThemeStore } from '../store/theme.store';
+import { lightTheme } from '../theme';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export const Badge: React.FC<BadgeProps> = ({
   variant = 'primary',
   size = 'medium',
 }) => {
-  const { theme } = useThemeStore();
+  const theme = lightTheme;
 
   return (
     <View style={[styles(theme, variant).badge, sizeStyles[size]]}>

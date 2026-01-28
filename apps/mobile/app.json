@@ -30,8 +30,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      "@stripe/stripe-react-native"
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.solitaire.smash",
+          "enableGooglePay": true
+        }
+      ]
     ],
     "extra": {
       "eas": {

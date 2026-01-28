@@ -1,4 +1,15 @@
-import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
+
+type HapticsModule = typeof import('expo-haptics');
+
+function getHaptics(): HapticsModule | null {
+  if (Platform.OS === 'web') return null;
+  try {
+    return require('expo-haptics') as HapticsModule;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Haptic Feedback Service
@@ -12,6 +23,8 @@ class HapticService {
    */
   light() {
     if (!this.enabled) return;
+    const Haptics = getHaptics();
+    if (!Haptics) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
@@ -20,6 +33,8 @@ class HapticService {
    */
   medium() {
     if (!this.enabled) return;
+    const Haptics = getHaptics();
+    if (!Haptics) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }
 
@@ -28,6 +43,8 @@ class HapticService {
    */
   heavy() {
     if (!this.enabled) return;
+    const Haptics = getHaptics();
+    if (!Haptics) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
   }
 
@@ -36,6 +53,8 @@ class HapticService {
    */
   success() {
     if (!this.enabled) return;
+    const Haptics = getHaptics();
+    if (!Haptics) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
@@ -44,6 +63,8 @@ class HapticService {
    */
   warning() {
     if (!this.enabled) return;
+    const Haptics = getHaptics();
+    if (!Haptics) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   }
 
@@ -52,6 +73,8 @@ class HapticService {
    */
   error() {
     if (!this.enabled) return;
+    const Haptics = getHaptics();
+    if (!Haptics) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   }
 
@@ -60,6 +83,8 @@ class HapticService {
    */
   selection() {
     if (!this.enabled) return;
+    const Haptics = getHaptics();
+    if (!Haptics) return;
     Haptics.selectionAsync();
   }
 
@@ -96,6 +121,9 @@ class HapticService {
    */
   async winCelebration() {
     if (!this.enabled) return;
+
+    const Haptics = getHaptics();
+    if (!Haptics) return;
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     await new Promise(resolve => setTimeout(resolve, 100));

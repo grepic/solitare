@@ -1,5 +1,16 @@
-import { Audio } from 'expo-av';
-import { Sound } from 'expo-av/build/Audio';
+import { Platform } from 'react-native';
+import type { Sound } from 'expo-av/build/Audio';
+
+type ExpoAvModule = typeof import('expo-av');
+
+function getExpoAv(): ExpoAvModule | null {
+  if (Platform.OS === 'web') return null;
+  try {
+    return require('expo-av') as ExpoAvModule;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Sound Manager for game audio
@@ -21,8 +32,11 @@ class SoundService {
   static readonly FOUNDATION_DROP = 'foundation_drop';
 
   async initialize() {
+    const expoAv = getExpoAv();
+    if (!expoAv) return;
+
     // Set audio mode
-    await Audio.setAudioModeAsync({
+    await expoAv.Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
       playsInSilentModeIOS: true,
       staysActiveInBackground: false,
@@ -50,6 +64,7 @@ class SoundService {
    */
   async play(soundId: string, volume?: number) {
     if (!this.enabled) return;
+    if (Platform.OS === 'web') return;
 
     const sound = this.sounds.get(soundId);
     if (sound) {
@@ -148,6 +163,11 @@ class SoundService {
    * Cleanup all sounds
    */
   async cleanup() {
+    if (Platform.OS === 'web') {
+      this.sounds.clear();
+      return;
+    }
+
     for (const sound of this.sounds.values()) {
       await sound.unloadAsync();
     }

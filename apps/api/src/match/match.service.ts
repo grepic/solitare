@@ -273,14 +273,24 @@ export class MatchService {
   }
 
   async getLobbyTiers() {
-    return Object.entries(MATCH_TIER_CONFIG).map(([tier, config]) => ({
-      tier: tier as MatchTier,
-      entryFeeCents: config.entryFeeCents,
-      prizePoolCents: config.prizePoolCents,
-      platformFeeCents: config.platformFeeCents,
-      winnerPayout: config.prizePoolCents,
-      isPractice: config.isPractice,
-    }));
+    type TierConfig = {
+      entryFeeCents: number;
+      prizePoolCents: number;
+      platformFeeCents: number;
+      isPractice: boolean;
+    };
+    
+    return Object.entries(MATCH_TIER_CONFIG).map(([tier, config]) => {
+      const typedConfig = config as TierConfig;
+      return {
+        tier: tier as MatchTier,
+        entryFeeCents: typedConfig.entryFeeCents,
+        prizePoolCents: typedConfig.prizePoolCents,
+        platformFeeCents: typedConfig.platformFeeCents,
+        winnerPayout: typedConfig.prizePoolCents,
+        isPractice: typedConfig.isPractice,
+      };
+    });
   }
 
   async getMatchReplay(matchId: string, userId: string) {

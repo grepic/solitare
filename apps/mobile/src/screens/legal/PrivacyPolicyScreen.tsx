@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, Text, StyleSheet } from 'react';
+import { ScrollView, Text, StyleSheet } from 'react-native';
 import { useThemeStore } from '../../store/theme.store';
 
 export default function PrivacyPolicyScreen() {

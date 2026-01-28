@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen({ navigation }: any) {
   const { theme, mode, setThemeMode } = useThemeStore();
-  const { logout } = useAuthStore();
+  const { clearAuth } = useAuthStore();
 
   const [soundEnabled, setSoundEnabled] = useState(soundService.isEnabled());
   const [musicEnabled, setMusicEnabled] = useState(true);
@@ -37,7 +37,7 @@ export default function SettingsScreen({ navigation }: any) {
   };
 
   const handleLogout = async () => {
-    await logout();
+    await clearAuth();
     navigation.replace('Login');
   };
 

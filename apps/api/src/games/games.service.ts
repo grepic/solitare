@@ -466,41 +466,79 @@ export class GamesService {
    * Get all active game lobbies (for lobby browser)
    */
   async getActiveLobbies(tier?: MatchTier) {
-    const games = await this.prisma.game.findMany({
-      where: {
-        status: {
-          in: [GameStatus.WAITING, GameStatus.READY_CHECK],
-        },
-        tier: tier || undefined,
-        OR: [
-          { isLimited: false },
-          {
-            isLimited: true,
-            endsAt: { gt: new Date() },
-          },
-        ],
-      },
-      include: {
-        players: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                nickname: true,
-                avatarUrl: true,
-                profile: { select: { level: true } },
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: GAME_LOBBY_CONFIG.MAX_VISIBLE_LOBBIES,
-    });
+    // Use raw SQL for Prisma in raw SQL mode
+    const statusWaiting = GameStatus.WAITING;
+    const statusReadyCheck = GameStatus.READY_CHECK;
+    const now = new Date();
+    const maxLobbies = GAME_LOBBY_CONFIG.MAX_VISIBLE_LOBBIES;
 
-    return games;
+    const query = tier
+      ? `
+        SELECT g.* FROM "Game" g
+        WHERE g.status IN ($1, $2)
+        AND g.tier = $3
+        AND (g."isLimited" = false OR (g."isLimited" = true AND g."endsAt" > $4))
+        ORDER BY g."createdAt" DESC
+        LIMIT $5
+      `
+      : `
+        SELECT g.* FROM "Game" g
+        WHERE g.status IN ($1, $2)
+        AND (g."isLimited" = false OR (g."isLimited" = true AND g."endsAt" > $3))
+        ORDER BY g."createdAt" DESC
+        LIMIT $4
+      `;
+
+    const params = tier
+      ? [statusWaiting, statusReadyCheck, tier, now, maxLobbies]
+      : [statusWaiting, statusReadyCheck, now, maxLobbies];
+
+    const gamesResult = await (this.prisma as any).pool.query(query, params);
+    const games = gamesResult.rows;
+
+    // For each game, fetch players manually
+    const gamesWithPlayers = await Promise.all(
+      games.map(async (game) => {
+        const playersResult = await (this.prisma as any).pool.query(`
+          SELECT 
+            gp.*,
+            u.id as "user_id",
+            u.nickname as "user_nickname",
+            u."avatarUrl" as "user_avatarUrl",
+            up.level as "user_level"
+          FROM "GamePlayer" gp
+          JOIN "User" u ON gp."userId" = u.id
+          LEFT JOIN "UserProfile" up ON u.id = up."userId"
+          WHERE gp."gameId" = $1
+        `, [game.id]);
+
+        const players = playersResult.rows;
+
+        return {
+          ...game,
+          players: players.map((p) => ({
+            id: p.id,
+            userId: p.userId,
+            gameId: p.gameId,
+            status: p.status,
+            completionTimeMs: p.completionTimeMs,
+            finalScore: p.finalScore,
+            moveCount: p.moveCount,
+            rank: p.rank,
+            winningsCents: p.winningsCents,
+            joinedAt: p.joinedAt,
+            user: {
+              id: p.user_id,
+              nickname: p.user_nickname,
+              avatarUrl: p.user_avatarUrl,
+              profile: { level: p.user_level || 1 },
+            },
+          })),
+        };
+      })
+    );
+
+    return gamesWithPlayers;
   }
 
   /**

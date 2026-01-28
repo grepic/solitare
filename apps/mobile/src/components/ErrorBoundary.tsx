@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { Button } from '@solitaire/ui-kit';
+import { Button, lightTheme } from '@solitaire/ui-kit';
 
 interface Props {
   children: ReactNode;
@@ -79,14 +79,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <Button
               title="Try Again"
               onPress={this.handleReset}
-              theme={{
-                colors: {
-                  primary: '#6366f1',
-                  text: '#ffffff',
-                },
-                spacing: { md: 12 },
-                radius: { md: 8 },
-              }}
+              theme={lightTheme}
             />
           </ScrollView>
         </View>

@@ -42,7 +42,7 @@ export const Input: React.FC<InputProps> = ({
         autoCapitalize={autoCapitalize}
         style={[
           styles(theme).input,
-          error && styles(theme).inputError,
+          Boolean(error) && styles(theme).inputError,
           inputStyle,
         ]}
       />

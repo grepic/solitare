@@ -25,7 +25,7 @@ export interface PlayerStats {
 
   // Earnings
   totalEarnings: number;
-  totalLosses: number;
+  totalLossAmount: number;
   netProfit: number;
   biggestWin: number;
   biggestLoss: number;
@@ -142,7 +142,7 @@ class StatsService {
       fastestWinMs: 0,
       totalPlayTimeMs: 0,
       totalEarnings: 0,
-      totalLosses: 0,
+      totalLossAmount: 0,
       netProfit: 0,
       biggestWin: 0,
       biggestLoss: 0,
@@ -294,14 +294,14 @@ class StatsService {
         this.stats.biggestLoss = loss;
       }
 
-      this.stats.totalLosses += loss;
+      this.stats.totalLossAmount += loss;
     }
 
     // Calculate averages
     this.stats.winRate = (this.stats.totalWins / this.stats.totalGames) * 100;
     this.stats.averageGameTimeMs = this.stats.totalPlayTimeMs / this.stats.totalGames;
     this.stats.averageMoves = this.calculateAverageMoves();
-    this.stats.netProfit = this.stats.totalEarnings - this.stats.totalLosses;
+    this.stats.netProfit = this.stats.totalEarnings - this.stats.totalLossAmount;
 
     // Update tier stats
     this.updateTierStats(tier, result, timeMs, earnings);

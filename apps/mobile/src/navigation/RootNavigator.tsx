@@ -1,22 +1,11 @@
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/auth.store';
+import { createAppStackNavigator } from './createAppStackNavigator';
 
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import { SolitaireGameScreen } from '../games/solitaire';
-import { LobbyBrowserScreen } from '../screens/main/LobbyBrowserScreen';
-import { CreateGameScreen } from '../screens/main/CreateGameScreen';
-import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
-import SettingsScreen from '../screens/settings/SettingsScreen';
-import AgeVerificationScreen from '../screens/settings/AgeVerificationScreen';
-import LeaderboardScreen from '../screens/leaderboard/LeaderboardScreen';
-import ReplayScreen from '../screens/replay/ReplayScreen';
-import TermsOfServiceScreen from '../screens/legal/TermsOfServiceScreen';
-import PrivacyPolicyScreen from '../screens/legal/PrivacyPolicyScreen';
-import ResponsibleGamingScreen from '../screens/legal/ResponsibleGamingScreen';
 
-const Stack = createNativeStackNavigator();
+const Stack = createAppStackNavigator();
 
 export default function RootNavigator() {
   const { isAuthenticated } = useAuthStore();
@@ -28,22 +17,62 @@ export default function RootNavigator() {
           <Stack.Screen name="Main" component={MainNavigator} />
           <Stack.Screen
             name="Game"
-            component={SolitaireGameScreen}
+            getComponent={() => require('../games/solitaire').SolitaireGameScreen}
             options={{
               presentation: 'fullScreenModal',
               gestureEnabled: false,
             }}
           />
-          <Stack.Screen name="LobbyBrowser" component={LobbyBrowserScreen} options={{ headerShown: true, title: 'Game Lobbies' }} />
-          <Stack.Screen name="CreateGame" component={CreateGameScreen} options={{ headerShown: true, title: 'Create Game' }} />
-          <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ headerShown: true, title: '💰 Platform Revenue' }} />
-          <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, title: 'Settings' }} />
-          <Stack.Screen name="AgeVerification" component={AgeVerificationScreen} options={{ headerShown: true, title: 'Age Verification' }} />
-          <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ headerShown: true, title: 'Leaderboard' }} />
-          <Stack.Screen name="Replay" component={ReplayScreen} options={{ headerShown: true, title: 'Match Replay' }} />
-          <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ headerShown: true, title: 'Terms of Service' }} />
-          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: true, title: 'Privacy Policy' }} />
-          <Stack.Screen name="ResponsibleGaming" component={ResponsibleGamingScreen} options={{ headerShown: true, title: 'Responsible Gaming' }} />
+          <Stack.Screen
+            name="LobbyBrowser"
+            getComponent={() => require('../screens/main/LobbyBrowserScreen').LobbyBrowserScreen}
+            options={{ headerShown: true, title: 'Game Lobbies' }}
+          />
+          <Stack.Screen
+            name="CreateGame"
+            getComponent={() => require('../screens/main/CreateGameScreen').CreateGameScreen}
+            options={{ headerShown: true, title: 'Create Game' }}
+          />
+          <Stack.Screen
+            name="AdminDashboard"
+            getComponent={() => require('../screens/admin/AdminDashboardScreen').AdminDashboardScreen}
+            options={{ headerShown: true, title: '💰 Platform Revenue' }}
+          />
+          <Stack.Screen
+            name="Settings"
+            getComponent={() => require('../screens/settings/SettingsScreen').default}
+            options={{ headerShown: true, title: 'Settings' }}
+          />
+          <Stack.Screen
+            name="AgeVerification"
+            getComponent={() => require('../screens/settings/AgeVerificationScreen').default}
+            options={{ headerShown: true, title: 'Age Verification' }}
+          />
+          <Stack.Screen
+            name="Leaderboard"
+            getComponent={() => require('../screens/leaderboard/LeaderboardScreen').default}
+            options={{ headerShown: true, title: 'Leaderboard' }}
+          />
+          <Stack.Screen
+            name="Replay"
+            getComponent={() => require('../screens/replay/ReplayScreen').default}
+            options={{ headerShown: true, title: 'Match Replay' }}
+          />
+          <Stack.Screen
+            name="TermsOfService"
+            getComponent={() => require('../screens/legal/TermsOfServiceScreen').default}
+            options={{ headerShown: true, title: 'Terms of Service' }}
+          />
+          <Stack.Screen
+            name="PrivacyPolicy"
+            getComponent={() => require('../screens/legal/PrivacyPolicyScreen').default}
+            options={{ headerShown: true, title: 'Privacy Policy' }}
+          />
+          <Stack.Screen
+            name="ResponsibleGaming"
+            getComponent={() => require('../screens/legal/ResponsibleGamingScreen').default}
+            options={{ headerShown: true, title: 'Responsible Gaming' }}
+          />
         </>
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />

@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../store/auth.store';
 import {
   GameLobbyCard,
   GameLobbyEvent,

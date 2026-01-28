@@ -12,7 +12,7 @@ import { analyticsService } from './analytics.service';
 export interface ChatMessage {
   id: string;
   conversationId: string;
-  from UserId: string;
+  fromUserId: string;
   fromUsername: string;
   fromAvatar?: string;
   toUserId: string;

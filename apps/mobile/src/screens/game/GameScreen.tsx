@@ -65,8 +65,8 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
       }
     });
 
-    websocket.on('OPPONENT_PROGRESS', (data) => {
-      setOpponentProgress(data.movesCount);
+    websocket.on('STATE_SYNC', (data) => {
+      setOpponentProgress(data.snapshot.opponentProgress?.movesCount ?? 0);
     });
 
     websocket.on('MATCH_END', (data) => {
@@ -75,7 +75,7 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
 
     return () => {
       websocket.off('MATCH_START');
-      websocket.off('OPPONENT_PROGRESS');
+      websocket.off('STATE_SYNC');
       websocket.off('MATCH_END');
       reset();
     };
@@ -165,7 +165,7 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
         }
       } else if (draggedCard.type === 'tableau' && dropType === 'tableau') {
         const pile = gameState?.tableau[draggedCard.index!];
-        const cardCount = draggedCard.cardIndex !== undefined
+        const cardCount = draggedCard.cardIndex !== undefined && pile
           ? pile.length - draggedCard.cardIndex
           : 1;
 
@@ -178,9 +178,9 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
       }
 
       if (move) {
-        const result = makeMove(move);
+        const ok = makeMove(move);
 
-        if (result.success) {
+        if (ok) {
           // Success feedback!
           const isFoundationMove = move.type === MoveType.WASTE_TO_FOUNDATION ||
                                    move.type === MoveType.TABLEAU_TO_FOUNDATION;
@@ -239,7 +239,7 @@ export default function GameScreen({ route, navigation }: GameScreenProps) {
     } else if (selectedPile.type === 'tableau' && type === 'tableau') {
       const pile = gameState?.tableau[selectedPile.index!];
       // Calculate how many cards to move based on which card was selected
-      const cardCount = selectedPile.cardIndex !== undefined
+      const cardCount = selectedPile.cardIndex !== undefined && pile
         ? pile.length - selectedPile.cardIndex
         : 1;
 

@@ -1,5 +1,5 @@
 import { initializeGame, executeMove, isGameWon, getAvailableMoves } from '../game';
-import { MoveType, Rank } from '../types';
+import { MoveType } from '../types';
 
 describe('Solitaire Engine', () => {
   describe('initializeGame', () => {

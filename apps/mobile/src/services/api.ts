@@ -1,14 +1,17 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 import { useAuthStore } from '../store/auth.store';
 import { toastService } from './toast.service';
 import ENV from '../config/env';
+
+const REQUEST_TIMEOUT_MS = Platform.OS === 'web' ? 8000 : 15000;
 
 const api = axios.create({
   baseURL: ENV.API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // 15 second timeout
+  timeout: REQUEST_TIMEOUT_MS,
 });
 
 // Retry configuration
@@ -26,6 +29,14 @@ function getRetryDelay(retryCount: number): number {
  * Check if error is retryable
  */
 function isRetryableError(error: AxiosError): boolean {
+  const method = error.config?.method?.toLowerCase();
+  const url = error.config?.url ?? '';
+
+  // Avoid retrying non-idempotent requests (e.g. login POST) and auth endpoints.
+  // Retries can create confusing UX (long spinners) and can loop if the API is unreachable.
+  if (url.includes('/auth/')) return false;
+  if (method && method !== 'get' && method !== 'head' && method !== 'options') return false;
+
   if (!error.response) {
     // Network errors are retryable
     return true;
@@ -120,7 +131,8 @@ api.interceptors.response.use(
     }
 
     // Handle retryable errors
-    if (isRetryableError(error) && !originalRequest._retryCount) {
+    // NOTE: _retryCount may be 0 (falsy). Only enter on first time when it's undefined.
+    if (isRetryableError(error) && (originalRequest._retryCount === undefined || originalRequest._retryCount === null)) {
       originalRequest._retryCount = 0;
 
       try {

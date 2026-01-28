@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Text, StyleSheet, View } from 'react';
+import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { Button } from '@solitaire/ui-kit';
 import { useThemeStore } from '../../store/theme.store';
 import api from '../../services/api';

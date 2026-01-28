@@ -489,9 +489,9 @@ class TournamentService {
 
       // Track analytics
       await analyticsService.logEvent('tournament_created', {
-        name: tournament.name,
-        format: tournament.format,
-        entry_fee: tournament.entryFee,
+        ...(tournament.name ? { name: tournament.name } : {}),
+        ...(tournament.format ? { format: tournament.format } : {}),
+        ...(typeof tournament.entryFee === 'number' ? { entry_fee: tournament.entryFee } : {}),
       });
 
       return null;

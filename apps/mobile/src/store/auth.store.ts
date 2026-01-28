@@ -1,6 +1,58 @@
 import { create } from 'zustand';
 import { AuthResponse } from '@solitaire/shared';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+const isWeb = Platform.OS === 'web';
+
+type SecureStoreModule = typeof import('expo-secure-store');
+
+function getSecureStore(): SecureStoreModule {
+  // Important: don't import/require expo-secure-store on web.
+  // Some Expo modules try to call into native constants during initialization.
+  // On web that can throw (e.g. ExponentConstants.getConstants is undefined).
+  return require('expo-secure-store') as SecureStoreModule;
+}
+
+async function setItem(key: string, value: string): Promise<void> {
+  if (isWeb) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
+  const SecureStore = getSecureStore();
+  await SecureStore.setItemAsync(key, value);
+}
+
+async function getItem(key: string): Promise<string | null> {
+  if (isWeb) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  const SecureStore = getSecureStore();
+  return SecureStore.getItemAsync(key);
+}
+
+async function deleteItem(key: string): Promise<void> {
+  if (isWeb) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+    return;
+  }
+
+  const SecureStore = getSecureStore();
+  await SecureStore.deleteItemAsync(key);
+}
 
 interface AuthState {
   user: AuthResponse['user'] | null;
@@ -22,8 +74,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   setAuth: async (data: AuthResponse) => {
-    await SecureStore.setItemAsync('accessToken', data.tokens.accessToken);
-    await SecureStore.setItemAsync('refreshToken', data.tokens.refreshToken);
+    await setItem('accessToken', data.tokens.accessToken);
+    await setItem('refreshToken', data.tokens.refreshToken);
 
     set({
       user: data.user,
@@ -35,8 +87,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearAuth: async () => {
-    await SecureStore.deleteItemAsync('accessToken');
-    await SecureStore.deleteItemAsync('refreshToken');
+    await deleteItem('accessToken');
+    await deleteItem('refreshToken');
 
     set({
       user: null,
@@ -48,8 +100,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   loadAuth: async () => {
-    const accessToken = await SecureStore.getItemAsync('accessToken');
-    const refreshToken = await SecureStore.getItemAsync('refreshToken');
+    const accessToken = await getItem('accessToken');
+    const refreshToken = await getItem('refreshToken');
 
     if (accessToken && refreshToken) {
       set({

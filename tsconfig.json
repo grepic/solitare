@@ -8,6 +8,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
+    "noEmit": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
