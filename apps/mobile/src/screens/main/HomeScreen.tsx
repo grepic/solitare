@@ -98,6 +98,27 @@ export default function HomeScreen({ navigation }: any) {
               />
             )}
             <Button
+              title="💬"
+              onPress={() => navigation.navigate('Conversations')}
+              variant="ghost"
+              theme={theme}
+              size="small"
+            />
+            <Button
+              title="🎨"
+              onPress={() => navigation.navigate('Customization')}
+              variant="ghost"
+              theme={theme}
+              size="small"
+            />
+            <Button
+              title="💵"
+              onPress={() => navigation.navigate('Wallet')}
+              variant="ghost"
+              theme={theme}
+              size="small"
+            />
+            <Button
               title="🏆"
               onPress={() => navigation.navigate('Leaderboard')}
               variant="ghost"

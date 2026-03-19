@@ -124,10 +124,17 @@ export default function ProfileScreen({ navigation }: any) {
 
       <Card theme={theme}>
         <Button
-          title="Settings"
-          onPress={() => navigation.navigate('Settings')}
+          title="📊 View Detailed Stats"
+          onPress={() => navigation.navigate('Stats')}
           variant="primary"
           theme={theme}
+        />
+        <Button
+          title="Settings"
+          onPress={() => navigation.navigate('Settings')}
+          variant="secondary"
+          theme={theme}
+          style={{ marginTop: theme.spacing.md }}
         />
         <Button
           title={`Theme: ${isDark ? 'Dark' : 'Light'}`}
