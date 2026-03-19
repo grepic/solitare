@@ -123,6 +123,21 @@ export default function RootNavigator() {
             getComponent={() => require('../screens/customization/CustomizationDetailScreen').default}
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="Achievements"
+            getComponent={() => require('../screens/achievements/AchievementsScreen').default}
+            options={{ headerShown: true, title: 'Achievements' }}
+          />
+          <Stack.Screen
+            name="DailyChallenge"
+            getComponent={() => require('../screens/daily-challenge/DailyChallengeScreen').default}
+            options={{ headerShown: true, title: 'Daily Challenge' }}
+          />
+          <Stack.Screen
+            name="Referrals"
+            getComponent={() => require('../screens/referrals/ReferralsScreen').default}
+            options={{ headerShown: true, title: 'Refer Friends' }}
+          />
         </>
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />

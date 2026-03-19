@@ -130,6 +130,20 @@ export default function ProfileScreen({ navigation }: any) {
           theme={theme}
         />
         <Button
+          title="🏆 Achievements"
+          onPress={() => navigation.navigate('Achievements')}
+          variant="primary"
+          theme={theme}
+          style={{ marginTop: theme.spacing.md }}
+        />
+        <Button
+          title="🎁 Refer Friends"
+          onPress={() => navigation.navigate('Referrals')}
+          variant="primary"
+          theme={theme}
+          style={{ marginTop: theme.spacing.md }}
+        />
+        <Button
           title="Settings"
           onPress={() => navigation.navigate('Settings')}
           variant="secondary"

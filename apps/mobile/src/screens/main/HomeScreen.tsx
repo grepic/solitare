@@ -139,24 +139,45 @@ export default function HomeScreen({ navigation }: any) {
       </Text>
 
       {!inQueue && (
-        <Card theme={theme}>
-          <View style={styles(theme).lobbyCard}>
-            <View style={styles(theme).lobbyInfo}>
-              <Text style={[styles(theme).lobbyTitle, { color: theme.colors.text }]}>
-                🎮 Browse Multi-Player Lobbies
-              </Text>
-              <Text style={[styles(theme).lobbyDesc, { color: theme.colors.textSecondary }]}>
-                Join games with 4-10 players • Win proportional prizes
-              </Text>
+        <>
+          <Card theme={theme}>
+            <View style={styles(theme).lobbyCard}>
+              <View style={styles(theme).lobbyInfo}>
+                <Text style={[styles(theme).lobbyTitle, { color: theme.colors.text }]}>
+                  📅 Daily Challenge
+                </Text>
+                <Text style={[styles(theme).lobbyDesc, { color: theme.colors.textSecondary }]}>
+                  Play today's challenge • Build your streak • Earn bonus rewards
+                </Text>
+              </View>
+              <Button
+                title="Play Challenge"
+                onPress={() => navigation.navigate('DailyChallenge')}
+                variant="primary"
+                theme={theme}
+              />
             </View>
-            <Button
-              title="Browse Lobbies"
-              onPress={() => navigation.navigate('LobbyBrowser')}
-              variant="primary"
-              theme={theme}
-            />
-          </View>
-        </Card>
+          </Card>
+
+          <Card theme={theme}>
+            <View style={styles(theme).lobbyCard}>
+              <View style={styles(theme).lobbyInfo}>
+                <Text style={[styles(theme).lobbyTitle, { color: theme.colors.text }]}>
+                  🎮 Browse Multi-Player Lobbies
+                </Text>
+                <Text style={[styles(theme).lobbyDesc, { color: theme.colors.textSecondary }]}>
+                  Join games with 4-10 players • Win proportional prizes
+                </Text>
+              </View>
+              <Button
+                title="Browse Lobbies"
+                onPress={() => navigation.navigate('LobbyBrowser')}
+                variant="primary"
+                theme={theme}
+              />
+            </View>
+          </Card>
+        </>
       )}
 
       {inQueue ? (
